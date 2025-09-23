@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GT Job Finder{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gt-navy:#003057; /* GT Navy (Primary Text & Backgrounds) */
+            --gt-gold:#B3A369; /* GT Gold (Accents & Links) */
+            --buzz-gold:#EAAA00; /* Buzz Gold (Primary Buttons) */
+            --white:#FFFFFF; /* Main Background & Contrast Text */
+            --tech-slate:#EFEFEF; /* Subtle Backgrounds */
+            --muted:#6b7280;
+            --text:#0f172a;
+        }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: var(--text); background: var(--white); }
+        a { color: inherit; text-decoration: none; }
+        /* Navbar */
+        .navbar { position: sticky; top:0; z-index: 50; background: var(--gt-gold); color: #111827; border-bottom: 1px solid rgba(0,0,0,0.06); }
+        .nav-content { max-width: 1100px; margin: 0 auto; display:flex; align-items:center; justify-content: space-between; padding: 16px 20px; }
+        .brand { display:flex; align-items:center; gap:10px; font-weight:700; color: #111827; }
+        .nav-links { display:flex; align-items:center; gap:18px; font-weight:600; color: #111827; }
+        .nav-links a { color: #111827; }
+        .nav-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+        .cta { display:inline-flex; align-items:center; justify-content:center; padding: 0 18px; min-height: 42px; border:1px solid rgba(0,0,0,0.12); color: #111827; background: var(--white); border-radius: 12px; font-weight:700; line-height: 1; text-align: center; }
+        .cta:hover { filter: brightness(0.95); text-decoration: none; }
+        /* Footer */
+        footer { background: var(--gt-gold); border-top: 1px solid rgba(0,0,0,0.06); padding: 24px 20px; margin-top: 60px; color: #111827; font-size: 14px; }
+        .footer-content { max-width: 1100px; margin:0 auto; display:flex; justify-content: space-between; align-items:center; }
+        /* Container */
+        .container { max-width: 1100px; margin:0 auto; padding: 0 20px; }
+        /* Hero */
+        .hero { position: relative; min-height: 62vh; display:flex; align-items:center; }
+        .hero-bg { position:absolute; inset:0; background-size: cover; background-position:center; opacity: 0.25; }
+        .hero-overlay { position:absolute; inset:0; background: radial-gradient(ellipse at center, rgba(255,255,255,0.15), var(--tech-slate)); opacity: 0.9; }
+        .hero-content { position:relative; z-index:1; padding: 60px 0; }
+        .kicker { color: var(--gt-gold); font-weight:700; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+        h1 { font-size: clamp(34px, 6vw, 52px); line-height: 1.05; margin: 10px 0 14px; color: var(--gt-navy); }
+        .subtitle { font-size: clamp(16px, 2.6vw, 18px); color:#1f2937; max-width: 720px; }
+    </style>
+    {% block extra_head %}{% endblock %}
+    {% load static %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <a class="brand" href="/">GT Job Finder</a>
+            <div class="nav-links">
+                <a href="#jobs">Jobs</a>
+                <a href="#candidates">Candidates</a>
+                <a href="#about">About</a>
+                <a class="cta" href="#get-started">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <footer>
+        <div class="footer-content">
+            <div>© {{ now|default:2025 }} GT Job Finder</div>
+            <div>Made for early-career talent and recruiters</div>
+        </div>
+    </footer>
+</body>
+</html>
+
+

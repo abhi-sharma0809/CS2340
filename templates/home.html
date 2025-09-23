@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}GT Job Finder — Launch your next role{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-bg" style="background-image:url('{% static "img/hero.jpg" %}');"></div>
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+        <div class="kicker">Welcome</div>
+        <h1>GT Job Finder!</h1>
+        <p class="subtitle">
+            A simple place where early‑career talent meets opportunity. Create a professional
+            profile, explore curated roles, and connect with recruiters. Visualize jobs on a map,
+            filter by what matters to you, and track your applications with ease.
+        </p>
+    </div>
+
+</section>
+
+<div class="container" style="padding: 30px 0 10px;">
+    <p style="color:#4b5563; max-width: 880px;">
+        GT Job Finder helps students and new grads discover roles that fit their skills and
+        preferences, while giving recruiters clean tools to post, search, and manage applicants.
+        This is the home page scaffold — ready for your content and features.
+    </p>
+
+</div>
+{% endblock %}
+
+
