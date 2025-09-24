@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ owner.username }}{% endblock %}
+{% block content %}
+<h1>{{ owner.username }}</h1>
+{% if profile.is_public or owner == request.user %}
+  <p><strong>Headline:</strong> {{ profile.headline }}</p>
+  <p><strong>Skills:</strong> {{ profile.skills }}</p>
+  ...
+{% else %}
+  <p>This profile is private.</p>
+{% endif %}
+{% endblock %}

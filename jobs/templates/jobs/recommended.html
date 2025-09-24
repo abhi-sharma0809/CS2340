@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Recommended Jobs{% endblock %}
+{% block content %}
+<h1>Recommended Jobs</h1>
+{% if skills and jobs %}
+  <p>Based on your skills: <em>{{ skills|join:", " }}</em></p>
+  <ul>
+    {% for j in jobs %}
+      <li>
+        <a href="{% url 'jobs:detail' j.pk %}">{{ j.title }}</a>
+        {% if j.location %} — {{ j.location }}{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% elif not skills %}
+  <p>Add skills to your <a href="{% url 'accounts:profile_edit' %}">profile</a> to get recommendations.</p>
+{% else %}
+  <p>No recommendations yet. Try adding more skills.</p>
+{% endif %}
+{% endblock %}

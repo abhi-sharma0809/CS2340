@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<h1>{{ request.user.username }}</h1>
+<p><strong>Headline:</strong> {{ profile.headline }}</p>
+<p><strong>Skills:</strong> {{ profile.skills }}</p>
+<p><strong>Education:</strong> {{ profile.education }}</p>
+<p><strong>Experience:</strong> {{ profile.experience }}</p>
+<p><strong>Links:</strong> {{ profile.links|linebreaksbr }}</p>
+<p><strong>Public profile?</strong> {{ profile.is_public|yesno:"Yes,No" }}</p>
+<a href="{% url 'accounts:profile_edit' %}">Edit</a>
+{% endblock %}
