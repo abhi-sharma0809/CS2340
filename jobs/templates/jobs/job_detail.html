@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ job.title }} - Job Details{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2>{{ job.title }}</h2>
+                        {% if job.company_logo %}
+                        <img src="{{ job.company_logo }}" alt="{{ job.company_name }}" 
+                             style="height: 60px; width: auto;">
+                        {% endif %}
+                    </div>
+                    <h4 class="text-muted">{{ job.company_name|default:"Company" }}</h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Job Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> 
+                               {{ job.location|default:"Not specified" }}</p>
+                            {% if job.latitude and job.longitude %}
+                            <p><strong><i class="fas fa-globe"></i> Coordinates:</strong> 
+                               {{ job.latitude|floatformat:4 }}, {{ job.longitude|floatformat:4 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if job.salary_min or job.salary_max %}
+                            <p><strong><i class="fas fa-dollar-sign"></i> Salary:</strong>
+                                {% if job.salary_min and job.salary_max %}
+                                    ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}
+                                {% elif job.salary_min %}
+                                    ${{ job.salary_min|floatformat:0 }}+
+                                {% elif job.salary_max %}
+                                    Up to ${{ job.salary_max|floatformat:0 }}
+                                {% endif %}
+                            </p>
+                            {% endif %}
+                            <p><strong><i class="fas fa-calendar"></i> Posted:</strong> {{ job.created_at|date:"F d, Y" }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Job Features -->
+                    <div class="mb-4">
+                        {% if job.is_remote %}
+                            <span class="badge bg-success me-2">Remote Work</span>
+                        {% endif %}
+                        {% if job.visa_sponsorship %}
+                            <span class="badge bg-warning me-2">Visa Sponsorship Available</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Job Description -->
+                    <div class="mb-4">
+                        <h4>Job Description</h4>
+                        <div class="job-description">
+                            {{ job.description|linebreaks }}
+                        </div>
+                    </div>
+                    
+                    <!-- Application Section -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'jobs:list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Search
+                        </a>
+                        
+                        {% if user.is_authenticated %}
+                            {% if has_applied %}
+                                <div class="alert alert-success d-inline-block mb-0">
+                                    <i class="fas fa-check-circle"></i> You have already applied to this job
+                                </div>
+                            {% else %}
+                                <form method="post" action="{% url 'jobs:apply' job.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-paper-plane"></i> Apply Now
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn btn-success btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> Login to Apply
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Company Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Company Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Company:</strong> {{ job.company_name|default:"Not specified" }}</p>
+                    <p><strong>Location:</strong> {{ job.location|default:"Not specified" }}</p>
+                    {% if job.visa_sponsorship %}
+                    <p class="text-success"><i class="fas fa-check"></i> Visa sponsorship available</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Job Stats -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Job Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Applications:</strong> {{ job.applications.count }}</p>
+                    <p><strong>Posted:</strong> {{ job.created_at|timesince }} ago</p>
+                </div>
+            </div>
+            
+            <!-- Related Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'jobs:recommended' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-star"></i> View Recommended Jobs
+                        </a>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'jobs:my_applications' %}" class="btn btn-outline-success">
+                            <i class="fas fa-briefcase"></i> My Applications
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'jobs:list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-search"></i> Search More Jobs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map for job location -->
+{% if job.latitude and job.longitude %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5>Job Location</h5>
+        </div>
+        <div class="card-body">
+            <div id="jobMap" style="height: 400px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initJobMap() {
+    const jobLat = {{ job.latitude }};
+    const jobLon = {{ job.longitude }};
+    
+    const map = new google.maps.Map(document.getElementById('jobMap'), {
+        center: { lat: jobLat, lng: jobLon },
+        zoom: 12
+    });
+    
+    new google.maps.Marker({
+        position: { lat: jobLat, lng: jobLon },
+        map: map,
+        title: '{{ job.title }}',
+        icon: {
+            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        }
+    });
+}
+
+// Load Google Maps API for job location
+function loadJobMap() {
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initJobMap';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+}
+
+document.addEventListener('DOMContentLoaded', loadJobMap);
+</script>
+{% endif %}
+{% endblock %}

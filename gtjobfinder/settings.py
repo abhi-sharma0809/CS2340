@@ -128,3 +128,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_REDIRECT_URL = "accounts:profile"
 LOGOUT_REDIRECT_URL = "core:home"
+
+# Google Maps API Key
+# Get your API key from: https://developers.google.com/maps/documentation/javascript/get-api-key
+GOOGLE_MAPS_API_KEY = "AIzaSyBVpc_Kw9tRNbxGyxWmKM3iSx2hn7JPrM4"
