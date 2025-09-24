@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}GT Job Finder — Home{% endblock %}
+
+{% block content %}
+
+  <div class="container hero-content">
+    <div class="kicker">Early-Career • Internships • New Grads</div>
+    <h1>Find roles faster. Apply smarter. Track everything.</h1>
+    <p class="subtitle">
+      GT Job Finder helps students and early-career talent discover relevant jobs,
+      apply with one click, and keep every application organized.
+    </p>
+
+    <div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
+      <a class="cta" href="{% url 'jobs:list' %}">Browse Jobs</a>
+      <a class="cta" href="{% url 'accounts:profile' %}">My Profile</a>
+      <a class="cta" href="{% url 'core:about' %}">About</a>
+    </div>
+  </div>
+</section>
+
+<section id="jobs" class="container" style="padding:56px 0 24px;">
+  <h2 style="color:var(--gt-navy); margin:0 0 8px;">Jobs</h2>
+  <p class="subtitle" style="max-width:800px; margin:0 0 12px;">
+    Filter by title, location, remote, visa sponsorship, and salary range.
+  </p>
+  <a class="cta" href="{% url 'jobs:list' %}">Open the Job Board</a>
+</section>
+
+<section id="candidates" class="container" style="padding:24px 0;">
+  <h2 style="color:var(--gt-navy); margin:0 0 8px;">Candidates</h2>
+  <p class="subtitle" style="max-width:800px; margin:0 0 12px;">
+    Build a concise profile with your headline, skills, education, and experience.
+    Control privacy to decide what recruiters can see.
+  </p>
+  <a class="cta" href="{% url 'accounts:profile' %}">View My Profile</a>
+</section>
+
+<section id="about" class="container" style="padding:24px 0 56px;">
+  <h2 style="color:var(--gt-navy); margin:0 0 8px;">About</h2>
+  <p class="subtitle" style="max-width:800px; margin:0 0 12px;">
+    Built by students, for students — to make the job hunt simpler and more transparent.
+  </p>
+  <a class="cta" href="{% url 'core:about' %}">Learn More</a>
+</section>
+
+<section id="get-started" class="container" style="padding:0 0 56px;">
+  {% if request.user.is_authenticated %}
+    <a class="cta" href="{% url 'jobs:list' %}">Start Browsing Jobs</a>
+    <a class="cta" href="{% url 'accounts:profile' %}">Update My Profile</a>
+  {% else %}
+    <a class="cta" href="{% url 'login' %}">Log In</a>
+    {% url 'accounts:signup' as signup_url %}
+    {% if signup_url %}<a class="cta" href="{{ signup_url }}">Sign Up</a>{% endif %}
+  {% endif %}
+</section>
+{% endblock %}

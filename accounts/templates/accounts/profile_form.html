@@ -1,10 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Edit Profile{% endblock %}
+{% block title %}Edit Profile — GT Job Finder{% endblock %}
+
 {% block content %}
-<h1>Edit Profile</h1>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Save</button>
-</form>
+<section class="container" style="padding:40px 0;">
+  <h1 style="color:var(--gt-navy); margin:0 0 16px;">Edit Profile</h1>
+
+  <form method="post" style="display:grid; gap:18px; max-width:860px;">
+    {% csrf_token %}
+
+    <!-- Basics -->
+    <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+      <h3 style="margin:0 0 8px; color:var(--gt-navy);">Basics</h3>
+      {{ form.headline.errors }} {{ form.headline.label_tag }} {{ form.headline }}
+    </div>
+
+    <!-- Content sections -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+        <h3 style="margin:0 0 8px; color:var(--gt-navy);">Skills</h3>
+        {{ form.skills.errors }} {{ form.skills }}
+      </div>
+      <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+        <h3 style="margin:0 0 8px; color:var(--gt-navy);">Education</h3>
+        {{ form.education.errors }} {{ form.education }}
+      </div>
+      <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+        <h3 style="margin:0 0 8px; color:var(--gt-navy);">Experience</h3>
+        {{ form.experience.errors }} {{ form.experience }}
+      </div>
+      <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+        <h3 style="margin:0 0 8px; color:var(--gt-navy);">Links</h3>
+        {{ form.links.errors }} {{ form.links }}
+        <p style="margin:6px 0 0; color:#6b7280;">One per line (e.g., LinkedIn, GitHub, portfolio).</p>
+      </div>
+    </div>
+
+    <!-- Privacy controls -->
+    <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+      <h3 style="margin:0 0 8px; color:var(--gt-navy);">Privacy Controls</h3>
+      <p style="margin:0 0 8px; color:#374151;">Headline is always public.</p>
+      <div style="display:grid; grid-template-columns:repeat(2,minmax(220px,1fr)); gap:10px;">
+        <label style="display:flex; gap:8px; align-items:center;">{{ form.is_public }} Public profile</label>
+        <label style="display:flex; gap:8px; align-items:center;">{{ form.show_skills }} Show skills to recruiters</label>
+        <label style="display:flex; gap:8px; align-items:center;">{{ form.show_education }} Show education to recruiters</label>
+        <label style="display:flex; gap:8px; align-items:center;">{{ form.show_experience }} Show experience to recruiters</label>
+        <label style="display:flex; gap:8px; align-items:center;">{{ form.show_links }} Show links to recruiters</label>
+      </div>
+    </div>
+
+    <!-- Commute -->
+    <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+      <h3 style="margin:0 0 8px; color:var(--gt-navy);">Commute</h3>
+      {{ form.commute_radius_km.label_tag }} {{ form.commute_radius_km }}
+    </div>
+
+    <div>
+      <button class="cta" type="submit">Save changes</button>
+      <a class="cta" href="{% url 'accounts:profile' %}" style="margin-left:8px;">Cancel</a>
+    </div>
+  </form>
+</section>
 {% endblock %}

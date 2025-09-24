@@ -1,12 +1,130 @@
 {% extends "base.html" %}
-{% block title %}My Profile{% endblock %}
+{% block title %}My Profile — GT Job Finder{% endblock %}
+
 {% block content %}
-<h1>{{ request.user.username }}</h1>
-<p><strong>Headline:</strong> {{ profile.headline }}</p>
-<p><strong>Skills:</strong> {{ profile.skills }}</p>
-<p><strong>Education:</strong> {{ profile.education }}</p>
-<p><strong>Experience:</strong> {{ profile.experience }}</p>
-<p><strong>Links:</strong> {{ profile.links|linebreaksbr }}</p>
-<p><strong>Public profile?</strong> {{ profile.is_public|yesno:"Yes,No" }}</p>
-<a href="{% url 'accounts:profile_edit' %}">Edit</a>
+<section class="container" style="padding:40px 0 28px;">
+  <!-- Header card -->
+  <div style="display:grid; gap:16px;">
+    <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:22px;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div>
+          <div class="kicker" style="margin-bottom:6px;">Profile</div>
+          <h1 style="color:var(--gt-navy); margin:0;">{{ request.user.username|title }}</h1>
+          <p style="margin:6px 0 0; color:#374151;">
+            <strong>Headline:</strong>
+            {% if profile.headline %}{{ profile.headline }}{% else %}
+              <span style="color:#6b7280;">Add a headline to stand out.</span>
+            {% endif %}
+            <span style="margin-left:8px; font-size:12px; color:#065f46; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 6px; border-radius:9999px;">
+              Public
+            </span>
+          </p>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <a class="cta" href="{% url 'accounts:profile_edit' %}">Edit Profile</a>
+          <a class="cta" href="{% url 'core:home' %}">Back Home</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content grid -->
+    <div style="display:grid; grid-template-columns: 1.2fr .8fr; gap:16px;">
+      <!-- Left: sections -->
+      <div style="display:grid; gap:16px;">
+        <!-- Skills -->
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Skills</h3>
+          {% if profile.skills %}
+            <p style="margin:0; white-space:pre-line;">{{ profile.skills }}</p>
+          {% else %}
+            <p style="margin:0; color:#6b7280;">Not added yet.</p>
+          {% endif %}
+          <div style="margin-top:10px; font-size:12px; color:#374151;">
+            <strong>Recruiter visibility:</strong>
+            {% if profile.show_skills %}<span>Allowed</span>{% else %}<span>Hidden</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Education -->
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Education</h3>
+          {% if profile.education %}
+            <p style="margin:0; white-space:pre-line;">{{ profile.education }}</p>
+          {% else %}
+            <p style="margin:0; color:#6b7280;">Not added yet.</p>
+          {% endif %}
+          <div style="margin-top:10px; font-size:12px; color:#374151;">
+            <strong>Recruiter visibility:</strong>
+            {% if profile.show_education %}<span>Allowed</span>{% else %}<span>Hidden</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Experience -->
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Experience</h3>
+          {% if profile.experience %}
+            <p style="margin:0; white-space:pre-line;">{{ profile.experience }}</p>
+          {% else %}
+            <p style="margin:0; color:#6b7280;">Not added yet.</p>
+          {% endif %}
+          <div style="margin-top:10px; font-size:12px; color:#374151;">
+            <strong>Recruiter visibility:</strong>
+            {% if profile.show_experience %}<span>Allowed</span>{% else %}<span>Hidden</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Links -->
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Links</h3>
+          {% if profile.links %}
+            <div style="margin:0; display:grid; gap:6px;">
+              {% for line in profile.links.splitlines %}
+                {% if line %}
+                  <a href="{{ line }}" target="_blank" rel="noopener" style="text-decoration:underline;">{{ line }}</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% else %}
+            <p style="margin:0; color:#6b7280;">Not added yet.</p>
+          {% endif %}
+          <div style="margin-top:10px; font-size:12px; color:#374151;">
+            <strong>Recruiter visibility:</strong>
+            {% if profile.show_links %}<span>Allowed</span>{% else %}<span>Hidden</span>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: privacy controls -->
+      <aside style="display:grid; gap:16px;">
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Privacy Controls</h3>
+          <p style="margin:0 0 10px; color:#374151;">
+            <strong>Profile visibility:</strong>
+            {% if profile.is_public %}
+              <span style="color:#065f46;">Public</span>
+            {% else %}
+              <span style="color:#7c2d12;">Private</span>
+            {% endif %}
+          </p>
+          <ul style="list-style:none; padding:0; margin:0; display:grid; gap:8px; color:#374151;">
+            <li>Headline — <strong>Always public</strong></li>
+            <li>Skills — {% if profile.show_skills %}<strong>Allowed</strong>{% else %}<strong>Hidden</strong>{% endif %}</li>
+            <li>Education — {% if profile.show_education %}<strong>Allowed</strong>{% else %}<strong>Hidden</strong>{% endif %}</li>
+            <li>Experience — {% if profile.show_experience %}<strong>Allowed</strong>{% else %}<strong>Hidden</strong>{% endif %}</li>
+            <li>Links — {% if profile.show_links %}<strong>Allowed</strong>{% else %}<strong>Hidden</strong>{% endif %}</li>
+          </ul>
+          <div style="margin-top:12px;">
+            <a class="cta" href="{% url 'accounts:profile_edit' %}">Change privacy</a>
+          </div>
+        </div>
+
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Commute</h3>
+          <p style="margin:0;">Preferred radius: <strong>{{ profile.commute_radius_km }} km</strong></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
 {% endblock %}

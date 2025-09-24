@@ -17,7 +17,8 @@ def signup(request):
             return redirect("accounts:profile")
     else:
         form = UserCreationForm()
-    return render(request, "accounts/signup.html", {"form": form})
+    return render(request, "registration/signup.html", {"form": form})
+
 
 @login_required
 def view_profile(request):

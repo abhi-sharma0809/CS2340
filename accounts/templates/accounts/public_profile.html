@@ -1,12 +1,51 @@
 {% extends "base.html" %}
-{% block title %}{{ owner.username }}{% endblock %}
+{% block title %}{{ owner.username|title }} — Profile{% endblock %}
+
 {% block content %}
-<h1>{{ owner.username }}</h1>
-{% if profile.is_public or owner == request.user %}
-  <p><strong>Headline:</strong> {{ profile.headline }}</p>
-  <p><strong>Skills:</strong> {{ profile.skills }}</p>
-  ...
-{% else %}
-  <p>This profile is private.</p>
-{% endif %}
+<section class="container" style="padding:40px 0 28px;">
+  <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:22px;">
+    <h1 style="color:var(--gt-navy); margin:0 0 6px;">{{ owner.username|title }}</h1>
+    <p style="margin:0;"><strong>Headline:</strong> {{ profile.headline|default:"" }}</p>
+  </div>
+
+  <div style="display:grid; gap:16px; margin-top:16px;">
+    {% if profile.is_public %}
+      {% if profile.show_skills and profile.skills %}
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Skills</h3>
+          <p style="margin:0; white-space:pre-line;">{{ profile.skills }}</p>
+        </div>
+      {% endif %}
+
+      {% if profile.show_education and profile.education %}
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Education</h3>
+          <p style="margin:0; white-space:pre-line;">{{ profile.education }}</p>
+        </div>
+      {% endif %}
+
+      {% if profile.show_experience and profile.experience %}
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Experience</h3>
+          <p style="margin:0; white-space:pre-line;">{{ profile.experience }}</p>
+        </div>
+      {% endif %}
+
+      {% if profile.show_links and profile.links %}
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Links</h3>
+          <div style="display:grid; gap:6px;">
+            {% for line in profile.links.splitlines %}
+              {% if line %}<a href="{{ line }}" target="_blank" rel="noopener" style="text-decoration:underline;">{{ line }}</a>{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+        <p style="margin:0;">This profile is private.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

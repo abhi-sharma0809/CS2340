@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}About — GT Job Finder{% endblock %}
+
+{% block content %}
+<section class="container" style="padding:48px 0;">
+  <h1 style="color:var(--gt-navy); margin-bottom:12px;">About GT Job Finder</h1>
+  <p class="subtitle" style="max-width:800px;">
+    GT Job Finder helps students and early-career professionals discover roles,
+    track applications, and showcase skills — while enabling recruiters to post jobs
+    and connect with qualified candidates.
+  </p>
+
+  <div style="margin-top:28px; display:grid; gap:18px;">
+    <div>
+      <h3 style="margin:0 0 6px;">What you can do</h3>
+      <ul style="margin:0; padding-left:20px;">
+        <li>Create a profile with skills, education, and experience</li>
+        <li>Search jobs with filters (remote, visa sponsorship, salary)</li>
+        <li>Apply with one click and add a tailored note</li>
+        <li>Track status: Applied → Review → Interview → Offer → Closed</li>
+        <li>Control profile privacy</li>
+      </ul>
+    </div>
+
+    <div>
+      <h3 style="margin:18px 0 6px;">Why we built it</h3>
+      <p style="margin:0; max-width:800px;">
+        We want a simple, student-friendly job platform that surfaces relevant roles quickly
+        and keeps the application process organized — without extra noise.
+      </p>
+    </div>
+
+    <div>
+      <h3 style="margin:18px 0 6px;">Contact</h3>
+      <p style="margin:0;">
+        Questions or feedback? Reach us via the <a href="{% url 'core:home' %}">home page</a> or your
+        <a href="{% url 'accounts:profile' %}">profile</a>.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
