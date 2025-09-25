@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Job Search{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Search Sidebar -->
+        <div class="col-md-3 bg-light p-4">
+            <h4>Search Jobs</h4>
+            <form method="get" id="jobSearchForm">
+                <!-- Search Bar -->
+                <div class="mb-3">
+                    <label for="title" class="form-label">Job Title</label>
+                    <input type="text" class="form-control" id="title" name="title" 
+                           value="{{ filters.title }}" placeholder="e.g. Software Engineer">
+                </div>
+                
+                <!-- Location Search -->
+                <div class="mb-3">
+                    <label for="location" class="form-label">Location</label>
+                    <input type="text" class="form-control" id="location" name="location" 
+                           value="{{ filters.location }}" placeholder="e.g. Atlanta, GA">
+                </div>
+                
+                <!-- Radius Filter -->
+                <div class="mb-3">
+                    <label for="radius" class="form-label">Search Radius (km)</label>
+                    <select class="form-select" id="radius" name="radius">
+                        <option value="">Any distance</option>
+                        <option value="5" {% if radius == "5" %}selected{% endif %}>5 km</option>
+                        <option value="10" {% if radius == "10" %}selected{% endif %}>10 km</option>
+                        <option value="25" {% if radius == "25" %}selected{% endif %}>25 km</option>
+                        <option value="50" {% if radius == "50" %}selected{% endif %}>50 km</option>
+                        <option value="100" {% if radius == "100" %}selected{% endif %}>100 km</option>
+                    </select>
+                </div>
+                
+                <!-- Salary Range -->
+                <div class="mb-3">
+                    <label for="salary_min" class="form-label">Min Salary</label>
+                    <input type="number" class="form-control" id="salary_min" name="salary_min" 
+                           value="{{ filters.salary_min }}" placeholder="e.g. 50000">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="salary_max" class="form-label">Max Salary</label>
+                    <input type="number" class="form-control" id="salary_max" name="salary_max" 
+                           value="{{ filters.salary_max }}" placeholder="e.g. 100000">
+                </div>
+                
+                <!-- Filters -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="remote" name="remote" value="1" 
+                               {% if filters.remote == "1" %}checked{% endif %}>
+                        <label class="form-check-label" for="remote">
+                            Remote Only
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="visa" name="visa" value="1" 
+                               {% if filters.visa == "1" %}checked{% endif %}>
+                        <label class="form-check-label" for="visa">
+                            Visa Sponsorship
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100">Search Jobs</button>
+            </form>
+            
+            <!-- Location Services -->
+            <div class="mt-4">
+                <button type="button" class="btn btn-outline-secondary w-100" id="getLocationBtn">
+                    <i class="fas fa-map-marker-alt"></i> Use My Location
+                </button>
+                <small class="text-muted">Allow location access to find nearby jobs</small>
+                
+                <hr class="my-3">
+                
+                <div class="mb-2">
+                    <label class="form-label small">Or enter coordinates manually:</label>
+                    <div class="row">
+                        <div class="col-6">
+                            <input type="number" step="any" class="form-control form-control-sm" id="manual_lat" 
+                                   placeholder="Latitude" value="33.7490">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" step="any" class="form-control form-control-sm" id="manual_lon" 
+                                   placeholder="Longitude" value="-84.3880">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-2 w-100" id="useManualLocation">
+                        Use These Coordinates
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Job Results -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Job Search Results</h2>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'jobs:recommended' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-star"></i> Recommended Jobs
+                    </a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'jobs:my_applications' %}" class="btn btn-outline-success">
+                        <i class="fas fa-briefcase"></i> My Applications
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Map Container -->
+            <div id="map" style="height: 300px; width: 100%; margin-bottom: 20px;" class="border rounded"></div>
+            
+            
+            <!-- Job Listings -->
+            <div class="row">
+                {% for job_data in jobs_with_distance %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title">{{ job_data.job.title }}</h5>
+                                    {% if job_data.job.company_logo %}
+                                    <img src="{{ job_data.job.company_logo }}" alt="{{ job_data.job.company_name }}" 
+                                         style="height: 40px; width: auto;">
+                                    {% endif %}
+                                </div>
+                                
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    {{ job_data.job.company_name|default:"Company" }}
+                                </h6>
+                                
+                                <p class="card-text">
+                                    <i class="fas fa-map-marker-alt"></i> 
+                                    {{ job_data.job.location|default:"Location not specified" }}
+                                    {% if job_data.distance %}
+                                        <span class="badge bg-info ms-2">{{ job_data.distance }} km away</span>
+                                    {% endif %}
+                                </p>
+                                
+                                {% if job_data.job.salary_min or job_data.job.salary_max %}
+                                <p class="card-text">
+                                    <i class="fas fa-dollar-sign"></i> 
+                                    {% if job_data.job.salary_min and job_data.job.salary_max %}
+                                        ${{ job_data.job.salary_min|floatformat:0 }} - ${{ job_data.job.salary_max|floatformat:0 }}
+                                    {% elif job_data.job.salary_min %}
+                                        ${{ job_data.job.salary_min|floatformat:0 }}+
+                                    {% elif job_data.job.salary_max %}
+                                        Up to ${{ job_data.job.salary_max|floatformat:0 }}
+                                    {% endif %}
+                                </p>
+                                {% endif %}
+                                
+                                <div class="mb-2">
+                                    {% if job_data.job.is_remote %}
+                                        <span class="badge bg-success">Remote</span>
+                                    {% endif %}
+                                    {% if job_data.job.visa_sponsorship %}
+                                        <span class="badge bg-warning">Visa Sponsorship</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <p class="card-text">{{ job_data.job.description|truncatewords:20 }}</p>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'jobs:detail' job_data.job.pk %}" class="btn btn-outline-primary">
+                                        View Details
+                                    </a>
+                                    {% if user.is_authenticated %}
+                                        <button class="btn btn-success apply-btn" data-job-id="{{ job_data.job.pk }}">
+                                            <i class="fas fa-paper-plane"></i> Apply Now
+                                        </button>
+                                    {% else %}
+                                        <a href="{% url 'login' %}" class="btn btn-success">
+                                            <i class="fas fa-sign-in-alt"></i> Login to Apply
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-info text-center">
+                            <h4>No jobs found</h4>
+                            <p>Try adjusting your search criteria or location.</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden inputs for coordinates -->
+<input type="hidden" id="user_lat" name="user_lat" value="{{ user_lat }}">
+<input type="hidden" id="user_lon" name="user_lon" value="{{ user_lon }}">
+
+<script>
+// Location services
+document.getElementById('getLocationBtn').addEventListener('click', function() {
+    if (navigator.geolocation) {
+        // Show loading state
+        const button = document.getElementById('getLocationBtn');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
+        button.disabled = true;
+        
+        navigator.geolocation.getCurrentPosition(function(position) {
+            console.log('Location found:', position.coords.latitude, position.coords.longitude);
+            document.getElementById('user_lat').value = position.coords.latitude;
+            document.getElementById('user_lon').value = position.coords.longitude;
+            
+            // Add a radius if none is selected
+            if (!document.getElementById('radius').value) {
+                document.getElementById('radius').value = '25';
+            }
+            
+            // Submit the form
+            document.getElementById('jobSearchForm').submit();
+        }, function(error) {
+            console.error('Geolocation error:', error);
+            button.innerHTML = originalText;
+            button.disabled = false;
+            
+            let errorMessage = 'Unable to get your location. ';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage += 'Please allow location access and try again.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage += 'Location information is unavailable.';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage += 'Location request timed out.';
+                    break;
+                default:
+                    errorMessage += 'Please try again or enter your location manually.';
+                    break;
+            }
+            alert(errorMessage);
+        });
+    } else {
+        alert('Geolocation is not supported by this browser.');
+    }
+});
+
+// Manual location input
+document.getElementById('useManualLocation').addEventListener('click', function() {
+    const lat = document.getElementById('manual_lat').value;
+    const lon = document.getElementById('manual_lon').value;
+    
+    if (!lat || !lon) {
+        alert('Please enter both latitude and longitude');
+        return;
+    }
+    
+    if (isNaN(lat) || isNaN(lon)) {
+        alert('Please enter valid numbers for coordinates');
+        return;
+    }
+    
+    if (lat < -90 || lat > 90) {
+        alert('Latitude must be between -90 and 90');
+        return;
+    }
+    
+    if (lon < -180 || lon > 180) {
+        alert('Longitude must be between -180 and 180');
+        return;
+    }
+    
+    console.log('Using manual location:', lat, lon);
+    document.getElementById('user_lat').value = lat;
+    document.getElementById('user_lon').value = lon;
+    
+    // Add a radius if none is selected
+    if (!document.getElementById('radius').value) {
+        document.getElementById('radius').value = '25';
+    }
+    
+    // Submit the form
+    document.getElementById('jobSearchForm').submit();
+});
+
+// One-click apply functionality
+document.querySelectorAll('.apply-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const jobId = this.dataset.jobId;
+        const button = this;
+        
+        // Disable button and show loading
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+        
+        fetch(`/jobs/${jobId}/apply/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                button.innerHTML = '<i class="fas fa-check"></i> Applied!';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-secondary');
+                alert(data.message);
+            } else {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-paper-plane"></i> Apply Now';
+                alert('Error applying to job. Please try again.');
+            }
+        })
+        .catch(error => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-paper-plane"></i> Apply Now';
+            alert('Error applying to job. Please try again.');
+        });
+    });
+});
+
+// Initialize map
+function initMap() {
+    const userLat = parseFloat(document.getElementById('user_lat').value) || 33.7490; // Default to Atlanta
+    const userLon = parseFloat(document.getElementById('user_lon').value) || -84.3880;
+    
+    const map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: userLat, lng: userLon },
+        zoom: 10
+    });
+    
+    // Add user location marker
+    new google.maps.Marker({
+        position: { lat: userLat, lng: userLon },
+        map: map,
+        title: 'Your Location',
+        icon: {
+            url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+        }
+    });
+    
+    // Add job markers
+    {% for job_data in jobs_with_distance %}
+        {% if job_data.job.latitude and job_data.job.longitude %}
+        new google.maps.Marker({
+            position: { lat: {{ job_data.job.latitude }}, lng: {{ job_data.job.longitude }} },
+            map: map,
+            title: '{{ job_data.job.title }}',
+            icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            }
+        });
+        {% endif %}
+    {% endfor %}
+}
+
+// Load Google Maps API
+function loadGoogleMaps() {
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+}
+
+// Load map when page loads
+document.addEventListener('DOMContentLoaded', loadGoogleMaps);
+</script>
+{% endblock %}

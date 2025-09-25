@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Map Test{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Google Maps API Test</h2>
+    
+    <div class="alert alert-info">
+        <h5>API Key Status</h5>
+        <p><strong>API Key:</strong> {{ google_maps_api_key }}</p>
+        <p><strong>Length:</strong> {{ google_maps_api_key|length }} characters</p>
+    </div>
+    
+    <div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc;"></div>
+    
+    <div class="mt-3">
+        <button class="btn btn-primary" onclick="testMap()">Test Map</button>
+        <button class="btn btn-secondary" onclick="checkAPIKey()">Check API Key</button>
+    </div>
+    
+    <div id="status" class="mt-3"></div>
+</div>
+
+<script>
+function checkAPIKey() {
+    const status = document.getElementById('status');
+    const apiKey = '{{ google_maps_api_key }}';
+    
+    if (apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+        status.innerHTML = '<div class="alert alert-warning">API key not set! Please update settings.py</div>';
+    } else if (apiKey.length < 20) {
+        status.innerHTML = '<div class="alert alert-warning">API key seems too short. Please check your key.</div>';
+    } else {
+        status.innerHTML = '<div class="alert alert-success">API key looks good!</div>';
+    }
+}
+
+function testMap() {
+    const status = document.getElementById('status');
+    status.innerHTML = '<div class="alert alert-info">Loading map...</div>';
+    
+    // Test if Google Maps is loaded
+    if (typeof google === 'undefined') {
+        status.innerHTML = '<div class="alert alert-danger">Google Maps not loaded. Check API key and console for errors.</div>';
+        return;
+    }
+    
+    try {
+        const map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: 33.7490, lng: -84.3880 },
+            zoom: 10
+        });
+        
+        new google.maps.Marker({
+            position: { lat: 33.7490, lng: -84.3880 },
+            map: map,
+            title: 'Test Location'
+        });
+        
+        status.innerHTML = '<div class="alert alert-success">Map loaded successfully!</div>';
+    } catch (error) {
+        status.innerHTML = '<div class="alert alert-danger">Error: ' + error.message + '</div>';
+    }
+}
+
+// Load Google Maps API
+function loadGoogleMaps() {
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initTestMap';
+    script.async = true;
+    script.defer = true;
+    script.onerror = function() {
+        document.getElementById('status').innerHTML = '<div class="alert alert-danger">Failed to load Google Maps API. Check your API key and internet connection.</div>';
+    };
+    document.head.appendChild(script);
+}
+
+function initTestMap() {
+    document.getElementById('status').innerHTML = '<div class="alert alert-success">Google Maps API loaded successfully!</div>';
+}
+
+// Load map when page loads
+document.addEventListener('DOMContentLoaded', loadGoogleMaps);
+</script>
+{% endblock %}
