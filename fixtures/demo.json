@@ -1,0 +1,404 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "username": "demo_seeker",
+      "email": "demo_seeker@example.com",
+      "first_name": "Demo",
+      "last_name": "Seeker",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "password": "pbkdf2_sha256$600000$dummy$dummy"
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+      "username": "demo_recruiter",
+      "email": "demo_recruiter@example.com",
+      "first_name": "Demo",
+      "last_name": "Recruiter",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": false,
+      "password": "pbkdf2_sha256$600000$dummy$dummy"
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+      "username": "admin",
+      "email": "admin@gtjobfinder.com",
+      "first_name": "Admin",
+      "last_name": "User",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "password": "pbkdf2_sha256$600000$dummy$dummy"
+    }
+  },
+  {
+    "model": "accounts.profile",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "headline": "Full-Stack Developer with Python/Django expertise",
+      "skills": "Python, Django, JavaScript, React, SQL, Git, AWS, Docker",
+      "education": "Georgia Tech - Computer Science, B.S. (2023)",
+      "experience": "Software Engineer Intern at TechCorp (Summer 2022)\nFull-Stack Developer at StartupXYZ (2023-2024)",
+      "links": "https://github.com/demoseeker\nhttps://linkedin.com/in/demoseeker\nhttps://demoseeker.dev",
+      "is_public": true,
+      "show_skills": true,
+      "show_education": true,
+      "show_experience": true,
+      "show_links": true,
+      "commute_radius_km": 25
+    }
+  },
+  {
+    "model": "accounts.profile",
+    "pk": 2,
+    "fields": {
+      "user": 2,
+      "headline": "Senior Technical Recruiter",
+      "skills": "Recruiting, Talent Acquisition, Technical Interviews, ATS",
+      "education": "University of Georgia - Business Administration, B.A. (2015)",
+      "experience": "Technical Recruiter at BigTech (2018-2022)\nSenior Recruiter at StartupHub (2022-Present)",
+      "links": "https://linkedin.com/in/demorecruiter",
+      "is_public": true,
+      "show_skills": true,
+      "show_education": true,
+      "show_experience": true,
+      "show_links": true,
+      "commute_radius_km": 15
+    }
+  },
+  {
+    "model": "accounts.profile",
+    "pk": 3,
+    "fields": {
+      "user": 3,
+      "headline": "System Administrator",
+      "skills": "Django, Python, Linux, Database Administration",
+      "education": "Georgia Tech - Computer Science, M.S. (2020)",
+      "experience": "Software Engineer at Various Companies (2015-2020)\nSystem Admin at GT JobFinder (2020-Present)",
+      "links": "",
+      "is_public": true,
+      "show_skills": true,
+      "show_education": true,
+      "show_experience": true,
+      "show_links": false,
+      "commute_radius_km": 10
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 1,
+    "fields": {
+      "title": "Senior Python Developer",
+      "description": "We're looking for a senior Python developer to join our growing team. You'll work on building scalable web applications using Django, PostgreSQL, and AWS. Experience with Docker and Kubernetes preferred.",
+      "location": "Atlanta, GA",
+      "latitude": 33.7490,
+      "longitude": -84.3880,
+      "salary_min": 90000,
+      "salary_max": 130000,
+      "is_remote": true,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-20T10:00:00Z",
+      "company_name": "TechCorp",
+      "company_logo": "https://via.placeholder.com/100x50/0066CC/FFFFFF?text=TechCorp"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 2,
+    "fields": {
+      "title": "Frontend React Developer",
+      "description": "Join our frontend team to build beautiful, responsive user interfaces. We use React, TypeScript, and modern CSS frameworks. Experience with state management libraries like Redux is a plus.",
+      "location": "San Francisco, CA",
+      "latitude": 37.7749,
+      "longitude": -122.4194,
+      "salary_min": 100000,
+      "salary_max": 150000,
+      "is_remote": false,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-19T14:30:00Z",
+      "company_name": "StartupXYZ",
+      "company_logo": "https://via.placeholder.com/100x50/FF6B6B/FFFFFF?text=StartupXYZ"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 3,
+    "fields": {
+      "title": "Full-Stack Developer",
+      "description": "We need a versatile developer who can work across the entire stack. Our tech stack includes Django, React, PostgreSQL, and Redis. You'll be involved in both backend API development and frontend user interfaces.",
+      "location": "Austin, TX",
+      "latitude": 30.2672,
+      "longitude": -97.7431,
+      "salary_min": 80000,
+      "salary_max": 120000,
+      "is_remote": true,
+      "visa_sponsorship": false,
+      "created_at": "2024-09-18T09:15:00Z",
+      "company_name": "InnovateLab",
+      "company_logo": "https://via.placeholder.com/100x50/4ECDC4/FFFFFF?text=InnovateLab"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 4,
+    "fields": {
+      "title": "DevOps Engineer",
+      "description": "Help us scale our infrastructure and improve our deployment processes. Experience with AWS, Docker, Kubernetes, and CI/CD pipelines required. Python scripting skills preferred.",
+      "location": "Seattle, WA",
+      "latitude": 47.6062,
+      "longitude": -122.3321,
+      "salary_min": 110000,
+      "salary_max": 160000,
+      "is_remote": true,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-17T16:45:00Z",
+      "company_name": "CloudScale",
+      "company_logo": "https://via.placeholder.com/100x50/45B7D1/FFFFFF?text=CloudScale"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 5,
+    "fields": {
+      "title": "Data Scientist",
+      "description": "Join our data team to build machine learning models and analyze large datasets. We use Python, pandas, scikit-learn, and TensorFlow. Experience with SQL and data visualization tools preferred.",
+      "location": "New York, NY",
+      "latitude": 40.7128,
+      "longitude": -74.0060,
+      "salary_min": 95000,
+      "salary_max": 140000,
+      "is_remote": false,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-16T11:20:00Z",
+      "company_name": "DataInsights",
+      "company_logo": "https://via.placeholder.com/100x50/96CEB4/FFFFFF?text=DataInsights"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 6,
+    "fields": {
+      "title": "Backend API Developer",
+      "description": "Build robust REST APIs using Django and Django REST Framework. You'll work with PostgreSQL, Redis, and various third-party integrations. Experience with API design and documentation is essential.",
+      "location": "Denver, CO",
+      "latitude": 39.7392,
+      "longitude": -104.9903,
+      "salary_min": 85000,
+      "salary_max": 125000,
+      "is_remote": true,
+      "visa_sponsorship": false,
+      "created_at": "2024-09-15T13:10:00Z",
+      "company_name": "APIBuilders",
+      "company_logo": "https://via.placeholder.com/100x50/FECA57/FFFFFF?text=APIBuilders"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 7,
+    "fields": {
+      "title": "Mobile App Developer",
+      "description": "Develop cross-platform mobile applications using React Native. You'll work closely with our design team to create intuitive user experiences. Experience with native iOS/Android development is a bonus.",
+      "location": "Miami, FL",
+      "latitude": 25.7617,
+      "longitude": -80.1918,
+      "salary_min": 90000,
+      "salary_max": 135000,
+      "is_remote": false,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-14T08:30:00Z",
+      "company_name": "MobileFirst",
+      "company_logo": "https://via.placeholder.com/100x50/FF9FF3/FFFFFF?text=MobileFirst"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 8,
+    "fields": {
+      "title": "UI/UX Designer",
+      "description": "Create beautiful and functional user interfaces for our web and mobile applications. You'll work with Figma, Adobe Creative Suite, and collaborate closely with developers. Experience with design systems preferred.",
+      "location": "Portland, OR",
+      "latitude": 45.5152,
+      "longitude": -122.6784,
+      "salary_min": 70000,
+      "salary_max": 110000,
+      "is_remote": true,
+      "visa_sponsorship": false,
+      "created_at": "2024-09-13T15:45:00Z",
+      "company_name": "DesignStudio",
+      "company_logo": "https://via.placeholder.com/100x50/54A0FF/FFFFFF?text=DesignStudio"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 9,
+    "fields": {
+      "title": "Database Administrator",
+      "description": "Manage and optimize our PostgreSQL databases. You'll be responsible for performance tuning, backup strategies, and ensuring data integrity. Experience with database monitoring tools required.",
+      "location": "Chicago, IL",
+      "latitude": 41.8781,
+      "longitude": -87.6298,
+      "salary_min": 80000,
+      "salary_max": 120000,
+      "is_remote": true,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-12T12:00:00Z",
+      "company_name": "DataGuard",
+      "company_logo": "https://via.placeholder.com/100x50/5F27CD/FFFFFF?text=DataGuard"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 10,
+    "fields": {
+      "title": "Security Engineer",
+      "description": "Protect our systems and data from security threats. You'll conduct security audits, implement security policies, and respond to incidents. Experience with penetration testing and security tools preferred.",
+      "location": "Boston, MA",
+      "latitude": 42.3601,
+      "longitude": -71.0589,
+      "salary_min": 100000,
+      "salary_max": 150000,
+      "is_remote": false,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-11T10:15:00Z",
+      "company_name": "SecureTech",
+      "company_logo": "https://via.placeholder.com/100x50/00D2D3/FFFFFF?text=SecureTech"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 11,
+    "fields": {
+      "title": "Product Manager",
+      "description": "Lead product development from conception to launch. You'll work with engineering, design, and business teams to define product requirements and prioritize features. Technical background preferred.",
+      "location": "Los Angeles, CA",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "salary_min": 95000,
+      "salary_max": 145000,
+      "is_remote": true,
+      "visa_sponsorship": false,
+      "created_at": "2024-09-10T14:20:00Z",
+      "company_name": "ProductLab",
+      "company_logo": "https://via.placeholder.com/100x50/FF6348/FFFFFF?text=ProductLab"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 12,
+    "fields": {
+      "title": "QA Engineer",
+      "description": "Ensure our software meets quality standards through comprehensive testing. You'll write test cases, perform manual testing, and work with automated testing frameworks. Experience with Selenium preferred.",
+      "location": "Phoenix, AZ",
+      "latitude": 33.4484,
+      "longitude": -112.0740,
+      "salary_min": 75000,
+      "salary_max": 115000,
+      "is_remote": true,
+      "visa_sponsorship": false,
+      "created_at": "2024-09-09T09:30:00Z",
+      "company_name": "QualityAssurance",
+      "company_logo": "https://via.placeholder.com/100x50/2ED573/FFFFFF?text=QualityAssurance"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 13,
+    "fields": {
+      "title": "Technical Writer",
+      "description": "Create clear and comprehensive documentation for our APIs, user guides, and technical specifications. You'll work closely with developers to understand complex systems and translate them into user-friendly content.",
+      "location": "Nashville, TN",
+      "latitude": 36.1627,
+      "longitude": -86.7816,
+      "salary_min": 60000,
+      "salary_max": 90000,
+      "is_remote": true,
+      "visa_sponsorship": false,
+      "created_at": "2024-09-08T16:45:00Z",
+      "company_name": "DocuTech",
+      "company_logo": "https://via.placeholder.com/100x50/FFA502/FFFFFF?text=DocuTech"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 14,
+    "fields": {
+      "title": "Cloud Architect",
+      "description": "Design and implement cloud infrastructure solutions using AWS, Azure, or Google Cloud. You'll work on scalability, security, and cost optimization. Experience with Infrastructure as Code tools preferred.",
+      "location": "Dallas, TX",
+      "latitude": 32.7767,
+      "longitude": -96.7970,
+      "salary_min": 120000,
+      "salary_max": 180000,
+      "is_remote": true,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-07T11:10:00Z",
+      "company_name": "CloudMasters",
+      "company_logo": "https://via.placeholder.com/100x50/3742FA/FFFFFF?text=CloudMasters"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 15,
+    "fields": {
+      "title": "Machine Learning Engineer",
+      "description": "Build and deploy machine learning models in production environments. You'll work with Python, TensorFlow, PyTorch, and cloud ML services. Experience with MLOps and model monitoring preferred.",
+      "location": "San Diego, CA",
+      "latitude": 32.7157,
+      "longitude": -117.1611,
+      "salary_min": 110000,
+      "salary_max": 170000,
+      "is_remote": false,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-06T13:25:00Z",
+      "company_name": "MLInnovation",
+      "company_logo": "https://via.placeholder.com/100x50/FF3838/FFFFFF?text=MLInnovation"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 16,
+    "fields": {
+      "title": "Software Engineer - Midtown Atlanta",
+      "description": "Join our Midtown engineering team building web platforms with Django, React, and PostgreSQL. Collaborate across product and design.",
+      "location": "Atlanta, GA (Midtown)",
+      "latitude": 33.7800,
+      "longitude": -84.3860,
+      "salary_min": 85000,
+      "salary_max": 130000,
+      "is_remote": false,
+      "visa_sponsorship": true,
+      "created_at": "2024-09-05T10:00:00Z",
+      "company_name": "Peachtree Tech",
+      "company_logo": "https://via.placeholder.com/100x50/B3A369/FFFFFF?text=Peachtree+Tech"
+    }
+  },
+  {
+    "model": "jobs.job",
+    "pk": 17,
+    "fields": {
+      "title": "Backend Developer - Buckhead",
+      "description": "Build and scale backend services and APIs in Django. Experience with Celery, Redis, and cloud deployments a plus.",
+      "location": "Atlanta, GA (Buckhead)",
+      "latitude": 33.8480,
+      "longitude": -84.3720,
+      "salary_min": 90000,
+      "salary_max": 140000,
+      "is_remote": true,
+      "visa_sponsorship": false,
+      "created_at": "2024-09-04T12:00:00Z",
+      "company_name": "Buckhead Labs",
+      "company_logo": "https://via.placeholder.com/100x50/003057/FFFFFF?text=Buckhead+Labs"
+    }
+  }
+]

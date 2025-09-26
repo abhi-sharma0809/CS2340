@@ -76,12 +76,9 @@
                                     <i class="fas fa-check-circle"></i> You have already applied to this job
                                 </div>
                             {% else %}
-                                <form method="post" action="{% url 'jobs:apply' job.pk %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-success btn-lg">
-                                        <i class="fas fa-paper-plane"></i> Apply Now
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#applyModal">
+                                    <i class="fas fa-paper-plane"></i> Apply Now
+                                </button>
                             {% endif %}
                         {% else %}
                             <a href="{% url 'login' %}" class="btn btn-success btn-lg">
@@ -189,5 +186,38 @@ function loadJobMap() {
 
 document.addEventListener('DOMContentLoaded', loadJobMap);
 </script>
+{% endif %}
+
+<!-- Application Modal -->
+{% if user.is_authenticated and not has_applied %}
+<div class="modal fade" id="applyModal" tabindex="-1" aria-labelledby="applyModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="applyModalLabel">Apply to {{ job.title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'jobs:apply' job.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>You are applying to <strong>{{ job.title }}</strong> at <strong>{{ job.company_name }}</strong>.</p>
+          
+          <div class="mb-3">
+            <label for="note" class="form-label">Optional Note (Optional)</label>
+            <textarea class="form-control" id="note" name="note" rows="4" 
+                      placeholder="Tell the employer why you're interested in this position..."></textarea>
+            <div class="form-text">This note will be included with your application.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-paper-plane"></i> Submit Application
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endif %}
 {% endblock %}

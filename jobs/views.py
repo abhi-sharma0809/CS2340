@@ -84,20 +84,29 @@ def job_list(request):
     # Location-based filtering with radius
     user_lat = q("user_lat")
     user_lon = q("user_lon")
-    radius = q("radius")
+    # Determine selected radius: query param, else user's commute radius, else empty
+    radius_param = q("radius")
+    radius_selected = None
+    if radius_param:
+        radius_selected = radius_param
+    elif request.user.is_authenticated:
+        try:
+            radius_selected = str(Profile.objects.get(user=request.user).commute_radius_km)
+        except Profile.DoesNotExist:
+            radius_selected = None
     
     jobs_with_distance = []
     if user_lat and user_lon:
         try:
             user_lat = float(user_lat)
             user_lon = float(user_lon)
-            radius = float(radius) if radius else 50  # Default 50km radius if not specified
+            radius_value = float(radius_selected) if radius_selected else None
             
             for job in qs:
                 if job.latitude and job.longitude:
                     distance = calculate_distance(user_lat, user_lon, job.latitude, job.longitude)
                     # Show all jobs with distance, but filter by radius if specified
-                    if not radius or distance <= radius:
+                    if (radius_value is None) or (distance <= radius_value):
                         jobs_with_distance.append({
                             'job': job,
                             'distance': round(distance, 1)
@@ -120,7 +129,7 @@ def job_list(request):
         "filters": request.GET,
         "user_lat": user_lat,
         "user_lon": user_lon,
-        "radius": radius,
+        "radius_selected": radius_selected,
         "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY
     })
 
@@ -145,8 +154,11 @@ def apply_job(request, pk):
         messages.warning(request, "You have already applied to this job.")
         return redirect('jobs:detail', pk=pk)
     
+    # Get note from form data
+    note = request.POST.get('note', '')
+    
     # Create application
-    application = JobApplication.objects.create(job=job, user=request.user)
+    application = JobApplication.objects.create(job=job, user=request.user, note=note)
     messages.success(request, f"Successfully applied to {job.title}!")
     
     if request.headers.get('Content-Type') == 'application/json':
@@ -164,10 +176,4 @@ def my_applications(request):
         "applications": applications
     })
 
-def map_test(request):
-    return render(request, "jobs/map_test.html", {
-        "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY
-    })
-
-def location_test(request):
-    return render(request, "jobs/location_test.html")
+# Removed standalone map views; the Jobs list page includes an embedded map

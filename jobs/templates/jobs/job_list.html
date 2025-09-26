@@ -29,13 +29,17 @@
                     <label for="radius" class="form-label">Search Radius (km)</label>
                     <select class="form-select" id="radius" name="radius">
                         <option value="">Any distance</option>
-                        <option value="5" {% if radius == "5" %}selected{% endif %}>5 km</option>
-                        <option value="10" {% if radius == "10" %}selected{% endif %}>10 km</option>
-                        <option value="25" {% if radius == "25" %}selected{% endif %}>25 km</option>
-                        <option value="50" {% if radius == "50" %}selected{% endif %}>50 km</option>
-                        <option value="100" {% if radius == "100" %}selected{% endif %}>100 km</option>
+                        <option value="5" {% if radius_selected == "5" %}selected{% endif %}>5 km</option>
+                        <option value="10" {% if radius_selected == "10" %}selected{% endif %}>10 km</option>
+                        <option value="25" {% if radius_selected == "25" %}selected{% endif %}>25 km</option>
+                        <option value="50" {% if radius_selected == "50" %}selected{% endif %}>50 km</option>
+                        <option value="100" {% if radius_selected == "100" %}selected{% endif %}>100 km</option>
                     </select>
                 </div>
+                
+                <!-- Hidden inputs for coordinates (must be inside the form to submit) -->
+                <input type="hidden" id="user_lat" name="user_lat" value="{{ user_lat }}">
+                <input type="hidden" id="user_lon" name="user_lon" value="{{ user_lon }}">
                 
                 <!-- Salary Range -->
                 <div class="mb-3">
@@ -199,9 +203,7 @@
     </div>
 </div>
 
-<!-- Hidden inputs for coordinates -->
-<input type="hidden" id="user_lat" name="user_lat" value="{{ user_lat }}">
-<input type="hidden" id="user_lon" name="user_lon" value="{{ user_lon }}">
+<!-- Hidden inputs moved into the form above so they submit with filters -->
 
 <script>
 // Location services
@@ -290,6 +292,43 @@ document.getElementById('useManualLocation').addEventListener('click', function(
     document.getElementById('jobSearchForm').submit();
 });
 
+// Geocode typed location on submit to center map and enable radius filtering
+(function attachFormGeocodeHandler(){
+    const form = document.getElementById('jobSearchForm');
+    if (!form) return;
+
+    let resubmitting = false;
+    form.addEventListener('submit', function (e) {
+        if (resubmitting) return; // avoid loop
+
+        const locInput = document.getElementById('location');
+        const latEl = document.getElementById('user_lat');
+        const lonEl = document.getElementById('user_lon');
+        const hasCoords = (latEl.value && lonEl.value);
+        const hasLocationText = locInput && locInput.value.trim().length > 0;
+
+        // If user typed a location but we don't yet have coordinates, try geocoding
+        if (hasLocationText && !hasCoords) {
+            if (window.google && google.maps && google.maps.Geocoder) {
+                e.preventDefault();
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ address: locInput.value.trim() }, function(results, status) {
+                    if (status === 'OK' && results && results[0]) {
+                        const loc = results[0].geometry.location;
+                        latEl.value = loc.lat();
+                        lonEl.value = loc.lng();
+                    }
+                    // Submit regardless of success/failure to avoid blocking search
+                    resubmitting = true;
+                    form.submit();
+                });
+            } else {
+                // Maps not loaded yet; allow normal submit
+            }
+        }
+    });
+})();
+
 // One-click apply functionality
 document.querySelectorAll('.apply-btn').forEach(button => {
     button.addEventListener('click', function() {
@@ -330,37 +369,53 @@ document.querySelectorAll('.apply-btn').forEach(button => {
 
 // Initialize map
 function initMap() {
-    const userLat = parseFloat(document.getElementById('user_lat').value) || 33.7490; // Default to Atlanta
-    const userLon = parseFloat(document.getElementById('user_lon').value) || -84.3880;
-    
+    const latStr = document.getElementById('user_lat').value;
+    const lonStr = document.getElementById('user_lon').value;
+    const userLat = parseFloat(latStr);
+    const userLon = parseFloat(lonStr);
+
+    // Start with a broad US view; adjust below based on coords/markers
     const map = new google.maps.Map(document.getElementById('map'), {
-        center: { lat: userLat, lng: userLon },
-        zoom: 10
+        center: { lat: 39.8283, lng: -98.5795 },
+        zoom: 4
     });
-    
-    // Add user location marker
-    new google.maps.Marker({
-        position: { lat: userLat, lng: userLon },
-        map: map,
-        title: 'Your Location',
-        icon: {
-            url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-        }
-    });
-    
-    // Add job markers
+
+    const hasUserCoords = !isNaN(userLat) && !isNaN(userLon);
+    const bounds = new google.maps.LatLngBounds();
+
+    // Add job markers and accumulate bounds
     {% for job_data in jobs_with_distance %}
         {% if job_data.job.latitude and job_data.job.longitude %}
-        new google.maps.Marker({
-            position: { lat: {{ job_data.job.latitude }}, lng: {{ job_data.job.longitude }} },
-            map: map,
-            title: '{{ job_data.job.title }}',
-            icon: {
-                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-            }
-        });
+        (function(){
+            const pos = { lat: {{ job_data.job.latitude }}, lng: {{ job_data.job.longitude }} };
+            new google.maps.Marker({
+                position: pos,
+                map: map,
+                title: '{{ job_data.job.title }}',
+                icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' }
+            });
+            bounds.extend(pos);
+        })();
         {% endif %}
     {% endfor %}
+
+    if (hasUserCoords) {
+        // Center on provided coordinates and add a blue user marker
+        const userPos = { lat: userLat, lng: userLon };
+        map.setCenter(userPos);
+        map.setZoom(10);
+        new google.maps.Marker({
+            position: userPos,
+            map: map,
+            title: 'Your Location',
+            icon: { url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
+        });
+    } else {
+        // If no user coords, fit map to the job markers if any exist
+        if (!bounds.isEmpty()) {
+            map.fitBounds(bounds);
+        }
+    }
 }
 
 // Load Google Maps API

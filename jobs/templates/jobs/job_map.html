@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Job Map - GT Job Finder{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  .map-container {
+    height: 60vh;
+    width: 100%;
+    margin: 20px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .map-controls {
+    background: var(--white);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .control-group {
+    margin-bottom: 15px;
+  }
+  
+  .control-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  
+  .control-group input, .control-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  
+  .jobs-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--white);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .job-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .job-item:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .job-item:last-child {
+    border-bottom: none;
+  }
+  
+  .job-title {
+    font-weight: 600;
+    color: var(--gt-navy);
+    margin-bottom: 5px;
+  }
+  
+  .job-company {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+  
+  .job-location {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  
+  .distance-badge {
+    background: var(--gt-gold);
+    color: var(--text);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    float: right;
+  }
+  
+  .no-jobs {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Job Map</h1>
+  <p class="subtitle">Explore job opportunities by location. Use the controls below to filter by distance from your current location.</p>
+  
+  <div class="map-controls">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="control-group">
+          <label for="radius">Search Radius (km)</label>
+          <select id="radius">
+            <option value="10">10 km</option>
+            <option value="25">25 km</option>
+            <option value="50">50 km</option>
+            <option value="100">100 km</option>
+            <option value="0">Show All</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="control-group">
+          <label for="location-input">Location</label>
+          <input type="text" id="location-input" placeholder="Enter city or address" />
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="control-group">
+          <label>&nbsp;</label>
+          <button onclick="getCurrentLocation()" class="cta" style="width: 100%;">Use Current Location</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-md-8">
+      <div id="map" class="map-container"></div>
+    </div>
+    <div class="col-md-4">
+      <h3>Jobs in Area</h3>
+      <div id="jobs-list" class="jobs-list">
+        <div class="no-jobs">Select a location to see nearby jobs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Initialize map
+const map = L.map('map').setView([39.8283, -98.5795], 4); // Center on US
+
+// Add tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+// Job data from Django
+const jobs = {{ jobs_json|safe }};
+let currentLocation = null;
+let markers = [];
+let filteredJobs = [];
+
+// Set default radius from user profile
+{% if user_radius %}
+document.getElementById('radius').value = '{{ user_radius }}';
+{% endif %}
+
+// Haversine formula for distance calculation
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Add markers to map
+function addMarkers(jobsToShow) {
+  // Clear existing markers
+  markers.forEach(marker => map.removeLayer(marker));
+  markers = [];
+  
+  jobsToShow.forEach(job => {
+    const marker = L.marker([job.lat, job.lng]).addTo(map);
+    
+    const popupContent = `
+      <div style="min-width: 200px;">
+        <h4 style="margin: 0 0 10px 0; color: var(--gt-navy);">${job.title}</h4>
+        <p style="margin: 0 0 5px 0; color: var(--muted);">${job.company}</p>
+        <p style="margin: 0 0 10px 0; color: var(--muted);">${job.location}</p>
+        <a href="${job.url}" class="cta" style="display: inline-block; padding: 5px 15px; font-size: 12px;">View Job</a>
+      </div>
+    `;
+    
+    marker.bindPopup(popupContent);
+    markers.push(marker);
+  });
+}
+
+// Update jobs list
+function updateJobsList(jobsToShow) {
+  const jobsList = document.getElementById('jobs-list');
+  
+  if (jobsToShow.length === 0) {
+    jobsList.innerHTML = '<div class="no-jobs">No jobs found in this area</div>';
+    return;
+  }
+  
+  jobsList.innerHTML = jobsToShow.map(job => `
+    <div class="job-item" onclick="window.location.href='${job.url}'">
+      <div class="job-title">${job.title}</div>
+      <div class="job-company">${job.company}</div>
+      <div class="job-location">${job.location}</div>
+      ${currentLocation ? `<span class="distance-badge">${job.distance.toFixed(1)} km</span>` : ''}
+    </div>
+  `).join('');
+}
+
+// Filter jobs by distance
+function filterJobsByDistance() {
+  const radius = parseFloat(document.getElementById('radius').value);
+  
+  if (!currentLocation) {
+    filteredJobs = jobs;
+    addMarkers(filteredJobs);
+    updateJobsList(filteredJobs);
+    return;
+  }
+  
+  filteredJobs = jobs.map(job => {
+    const distance = calculateDistance(
+      currentLocation.lat, 
+      currentLocation.lng, 
+      job.lat, 
+      job.lng
+    );
+    return { ...job, distance };
+  }).filter(job => radius === 0 || job.distance <= radius);
+  
+  addMarkers(filteredJobs);
+  updateJobsList(filteredJobs);
+}
+
+// Get current location
+function getCurrentLocation() {
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by this browser.');
+    return;
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      currentLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      
+      map.setView([currentLocation.lat, currentLocation.lng], 10);
+      L.marker([currentLocation.lat, currentLocation.lng])
+        .addTo(map)
+        .bindPopup('Your Location')
+        .openPopup();
+      
+      filterJobsByDistance();
+    },
+    function(error) {
+      alert('Error getting location: ' + error.message);
+    }
+  );
+}
+
+// Event listeners
+document.getElementById('radius').addEventListener('change', filterJobsByDistance);
+
+// Initialize with all jobs
+filterJobsByDistance();
+</script>
+{% endblock %}
