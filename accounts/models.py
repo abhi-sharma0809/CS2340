@@ -3,7 +3,15 @@ from django.conf import settings
 from django.db import models
 
 class Profile(models.Model):
+    USER_TYPE_CHOICES = [
+        ('job_seeker', 'Job Seeker'),
+        ('recruiter', 'Recruiter'),
+    ]
+    
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='job_seeker')
+    
+    # Job seeker specific fields
     headline = models.CharField(max_length=120, blank=True)
     skills = models.TextField(blank=True)
     education = models.TextField(blank=True)
@@ -21,3 +29,32 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s profile"
+    
+    @property
+    def is_job_seeker(self):
+        return self.user_type == 'job_seeker'
+    
+    @property
+    def is_recruiter(self):
+        return self.user_type == 'recruiter'
+
+class RecruiterProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recruiter_profile')
+    company_name = models.CharField(max_length=200)
+    company_description = models.TextField(blank=True)
+    company_website = models.URLField(blank=True)
+    company_logo = models.URLField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
+    industry = models.CharField(max_length=100, blank=True)
+    company_size = models.CharField(max_length=50, blank=True)
+    
+    # Verification status
+    is_verified = models.BooleanField(default=False)
+    verification_notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.company_name}"

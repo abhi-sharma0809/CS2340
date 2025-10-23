@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Jobs - GT Job Finder{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header {
+    text-align: center;
+    margin: 40px 0;
+  }
+  
+  .page-header h1 {
+    color: var(--gt-navy);
+    margin-bottom: 10px;
+  }
+  
+  .page-header p {
+    color: var(--muted);
+    font-size: 16px;
+  }
+  
+  .jobs-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .job-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    padding: 24px;
+    transition: box-shadow 0.2s;
+  }
+  
+  .job-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  
+  .job-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gt-navy);
+    margin-bottom: 4px;
+  }
+  
+  .job-company {
+    color: var(--muted);
+    font-size: 16px;
+  }
+  
+  .job-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .btn-primary {
+    background: var(--gt-navy);
+    color: white;
+    border: none;
+  }
+  
+  .btn-primary:hover {
+    background: #002244;
+    color: white;
+  }
+  
+  .btn-outline {
+    background: transparent;
+    color: var(--gt-navy);
+    border: 1px solid var(--gt-navy);
+  }
+  
+  .btn-outline:hover {
+    background: var(--gt-navy);
+    color: white;
+  }
+  
+  .job-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .job-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  
+  .job-detail i {
+    color: var(--gt-gold);
+    width: 16px;
+  }
+  
+  .job-description {
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  
+  .job-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  
+  .job-status {
+    display: flex;
+    gap: 16px;
+  }
+  
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .status-active {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  
+  .empty-state i {
+    font-size: 48px;
+    color: var(--gt-gold);
+    margin-bottom: 16px;
+  }
+  
+  .empty-state h3 {
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    background: var(--gt-navy);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    margin-top: 20px;
+    transition: background-color 0.2s;
+  }
+  
+  .cta-button:hover {
+    background: #002244;
+    color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>My Posted Jobs</h1>
+  <p>Manage your job postings and track applications</p>
+</div>
+
+<div class="jobs-container">
+  {% if jobs %}
+    {% for job in jobs %}
+      <div class="job-card">
+        <div class="job-header">
+          <div>
+            <div class="job-title">{{ job.title }}</div>
+            <div class="job-company">{{ job.company_name|default:"Company not specified" }}</div>
+          </div>
+          <div class="job-actions">
+            <a href="{% url 'jobs:edit' job.pk %}" class="btn-sm btn-outline">Edit</a>
+            <a href="{% url 'jobs:detail' job.pk %}" class="btn-sm btn-primary">View</a>
+          </div>
+        </div>
+        
+        <div class="job-details">
+          {% if job.location %}
+            <div class="job-detail">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>{{ job.location }}</span>
+            </div>
+          {% endif %}
+          
+          {% if job.salary_min or job.salary_max %}
+            <div class="job-detail">
+              <i class="fas fa-dollar-sign"></i>
+              <span>
+                {% if job.salary_min and job.salary_max %}
+                  ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}
+                {% elif job.salary_min %}
+                  ${{ job.salary_min|floatformat:0 }}+
+                {% elif job.salary_max %}
+                  Up to ${{ job.salary_max|floatformat:0 }}
+                {% endif %}
+              </span>
+            </div>
+          {% endif %}
+          
+          {% if job.is_remote %}
+            <div class="job-detail">
+              <i class="fas fa-home"></i>
+              <span>Remote</span>
+            </div>
+          {% endif %}
+          
+          {% if job.visa_sponsorship %}
+            <div class="job-detail">
+              <i class="fas fa-passport"></i>
+              <span>Visa Sponsorship</span>
+            </div>
+          {% endif %}
+        </div>
+        
+        <div class="job-description">
+          {{ job.description|truncatewords:30 }}
+        </div>
+        
+        <div class="job-meta">
+          <div class="job-status">
+            <div class="status-item">
+              <span class="status-badge status-active">Active</span>
+            </div>
+            <div class="status-item">
+              <i class="fas fa-calendar"></i>
+              <span>Posted {{ job.created_at|date:"M d, Y" }}</span>
+            </div>
+            {% if job.applications.count %}
+              <div class="status-item">
+                <i class="fas fa-users"></i>
+                <span>{{ job.applications.count }} application{{ job.applications.count|pluralize }}</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="fas fa-briefcase"></i>
+      <h3>No jobs posted yet</h3>
+      <p>Start by posting your first job opening to attract talented candidates.</p>
+      <a href="{% url 'jobs:post' %}" class="cta-button">
+        <i class="fas fa-plus"></i>
+        Post Your First Job
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+

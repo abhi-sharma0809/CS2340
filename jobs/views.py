@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.conf import settings
 from .models import Job, JobApplication
+from .forms import JobPostForm
 from accounts.models import Profile
 
 def _skill_tokens(text: str):
@@ -177,3 +178,80 @@ def my_applications(request):
     })
 
 # Removed standalone map views; the Jobs list page includes an embedded map
+
+@login_required
+def post_job(request):
+    """View for recruiters to post new job openings"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. Only recruiters can post jobs.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    if request.method == 'POST':
+        form = JobPostForm(request.POST)
+        if form.is_valid():
+            job = form.save()
+            messages.success(request, f'Job "{job.title}" has been posted successfully!')
+            return redirect('jobs:detail', pk=job.pk)
+    else:
+        form = JobPostForm()
+    
+    return render(request, 'jobs/job_post.html', {
+        'form': form,
+        'title': 'Post New Job'
+    })
+
+@login_required
+def edit_job(request, pk):
+    """View for recruiters to edit existing job openings"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. Only recruiters can edit jobs.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    job = get_object_or_404(Job, pk=pk)
+    
+    if request.method == 'POST':
+        form = JobPostForm(request.POST, instance=job)
+        if form.is_valid():
+            job = form.save()
+            messages.success(request, f'Job "{job.title}" has been updated successfully!')
+            return redirect('jobs:detail', pk=job.pk)
+    else:
+        form = JobPostForm(instance=job)
+    
+    return render(request, 'jobs/job_post.html', {
+        'form': form,
+        'title': f'Edit Job: {job.title}',
+        'job': job
+    })
+
+@login_required
+def my_jobs(request):
+    """View for recruiters to see all their posted jobs"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    # For now, we'll show all jobs since we don't have a specific recruiter model
+    # In a real application, you'd filter by the logged-in user
+    jobs = Job.objects.all().order_by('-created_at')
+    return render(request, 'jobs/my_jobs.html', {
+        'jobs': jobs
+    })

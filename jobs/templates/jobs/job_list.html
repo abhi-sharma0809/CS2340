@@ -4,6 +4,30 @@
 {% block title %}Job Search{% endblock %}
 
 {% block content %}
+<!-- Recruiter Promotion Banner -->
+{% if not request.user.is_authenticated or not request.user.profile.is_recruiter %}
+<div class="container" style="margin-bottom: 30px;">
+    <div style="background: linear-gradient(135deg, var(--gt-gold), #f4d03f); border-radius: 12px; padding: 30px; text-align: center; margin: 20px 0;">
+        <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; margin-bottom: 15px; font-weight: 600; color: var(--gt-navy); font-size: 14px;">
+            <i class="fas fa-briefcase"></i>
+            <span>For Recruiters</span>
+        </div>
+        <h3 style="color: var(--gt-navy); margin-bottom: 10px; font-size: 24px;">Hiring Top Talent?</h3>
+        <p style="color: var(--gt-navy); margin-bottom: 20px; opacity: 0.9;">Post jobs, manage applications, and connect with the best early-career candidates</p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <a href="{% url 'accounts:recruiter_signup' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--gt-navy); color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">
+                <i class="fas fa-user-plus"></i>
+                Become a Recruiter
+            </a>
+            <a href="{% url 'jobs:post' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: rgba(255,255,255,0.9); color: var(--gt-navy); border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; border: 1px solid var(--gt-navy);">
+                <i class="fas fa-plus"></i>
+                Post a Job
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="container-fluid">
     <div class="row">
         <!-- Search Sidebar -->

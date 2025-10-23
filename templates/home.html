@@ -24,8 +24,96 @@
     <p style="color:#4b5563; max-width: 880px;">
         GT Job Finder helps students and new grads discover roles that fit their skills and
         preferences, while giving recruiters clean tools to post, search, and manage applicants.
-        This is the home page scaffold — ready for your content and features.
     </p>
+    
+    {% if not request.user.is_authenticated %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin: 40px 0;">
+        <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="width: 60px; height: 60px; background: var(--gt-navy); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; color: white;">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <h3 style="color: var(--gt-navy); margin-bottom: 8px;">Job Seeker</h3>
+                <p style="color: var(--muted); font-size: 14px;">Find your next opportunity</p>
+            </div>
+            <ul style="color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                <li>Create a professional profile</li>
+                <li>Browse curated job listings</li>
+                <li>Get personalized recommendations</li>
+                <li>Track your applications</li>
+            </ul>
+            <a href="{% url 'accounts:signup' %}" style="display: block; text-align: center; padding: 12px 24px; background: var(--gt-navy); color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                Get Started as Job Seeker
+            </a>
+        </div>
+        
+        <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="width: 60px; height: 60px; background: var(--gt-gold); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; color: var(--gt-navy);">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <h3 style="color: var(--gt-navy); margin-bottom: 8px;">Recruiter</h3>
+                <p style="color: var(--muted); font-size: 14px;">Post jobs and find talent</p>
+            </div>
+            <ul style="color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                <li>Post and manage job openings</li>
+                <li>Access candidate profiles</li>
+                <li>Track applications and analytics</li>
+                <li>Connect with top talent</li>
+            </ul>
+            <a href="{% url 'accounts:recruiter_signup' %}" style="display: block; text-align: center; padding: 12px 24px; background: var(--gt-gold); color: var(--gt-navy); border-radius: 8px; text-decoration: none; font-weight: 600;">
+                Get Started as Recruiter
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <!-- Show recruiter features for logged-in users -->
+    <div style="background: linear-gradient(135deg, var(--gt-gold), #f4d03f); border-radius: 16px; padding: 40px; margin: 40px 0; text-align: center;">
+        <div style="display: inline-flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 25px; margin-bottom: 20px; font-weight: 600; color: var(--gt-navy);">
+            <i class="fas fa-star"></i>
+            <span>New: Recruiter Features</span>
+        </div>
+        <h2 style="color: var(--gt-navy); margin-bottom: 16px; font-size: 28px;">Ready to Hire Top Talent?</h2>
+        <p style="color: var(--gt-navy); font-size: 18px; margin-bottom: 30px; opacity: 0.9;">Post jobs, manage applications, and connect with the best early-career candidates</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="width: 48px; height: 48px; background: var(--gt-navy); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; color: white;">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <h4 style="color: var(--gt-navy); margin-bottom: 8px;">Post Jobs</h4>
+                <p style="color: var(--muted); font-size: 14px;">Create detailed job postings with company info</p>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="width: 48px; height: 48px; background: var(--gt-navy); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; color: white;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h4 style="color: var(--gt-navy); margin-bottom: 8px;">Find Candidates</h4>
+                <p style="color: var(--muted); font-size: 14px;">Access detailed candidate profiles and skills</p>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="width: 48px; height: 48px; background: var(--gt-navy); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; color: white;">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h4 style="color: var(--gt-navy); margin-bottom: 8px;">Track Analytics</h4>
+                <p style="color: var(--muted); font-size: 14px;">Monitor applications and job performance</p>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <a href="{% url 'accounts:recruiter_signup' %}" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: var(--gt-navy); color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                <i class="fas fa-briefcase"></i>
+                Become a Recruiter
+            </a>
+            <a href="{% url 'jobs:post' %}" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: rgba(255,255,255,0.9); color: var(--gt-navy); border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; border: 2px solid var(--gt-navy);">
+                <i class="fas fa-plus"></i>
+                Post a Job
+            </a>
+        </div>
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}
