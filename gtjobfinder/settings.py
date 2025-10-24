@@ -132,3 +132,17 @@ LOGOUT_REDIRECT_URL = "core:home"
 # Google Maps API Key
 # Get your API key from: https://developers.google.com/maps/documentation/javascript/get-api-key
 GOOGLE_MAPS_API_KEY = "AIzaSyBVpc_Kw9tRNbxGyxWmKM3iSx2hn7JPrM4"
+
+# Email Configuration
+# Using Mailtrap for testing (free, super easy, catches all emails for testing!)
+# Sign up at https://mailtrap.io/ to get your credentials (takes 30 seconds)
+EMAIL_BACKEND = 'gtjobfinder.email_backend.CustomEmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@gtjobfinder.com'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_PORT = 2525
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'abd587700953a9'  # Get from mailtrap.io -> Email Testing -> SMTP Settings
+EMAIL_HOST_PASSWORD = '4f80924c5ea6f3'  # Get from mailtrap.io -> Email Testing -> SMTP Settings
+
+# For testing only: Use console backend
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

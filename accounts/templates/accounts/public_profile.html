@@ -1,11 +1,64 @@
 {% extends "base.html" %}
 {% block title %}{{ owner.username|title }} — Profile{% endblock %}
 
+{% block extra_head %}
+<style>
+  .communication-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  
+  .comm-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .comm-btn-message {
+    background: var(--gt-gold);
+    color: var(--gt-navy);
+  }
+  
+  .comm-btn-message:hover {
+    background: #a6955a;
+    color: white;
+  }
+  
+  .comm-btn-email {
+    background: var(--gt-navy);
+    color: white;
+  }
+  
+  .comm-btn-email:hover {
+    background: #002244;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="container" style="padding:40px 0 28px;">
   <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:22px;">
     <h1 style="color:var(--gt-navy); margin:0 0 6px;">{{ owner.username|title }}</h1>
     <p style="margin:0;"><strong>Headline:</strong> {{ profile.headline|default:"" }}</p>
+    
+    {% if user.is_authenticated and user.profile.is_recruiter and profile.is_job_seeker %}
+      <div class="communication-buttons">
+        <button class="comm-btn comm-btn-message" onclick="sendMessageToCandidate({{ owner.id }}, '{{ owner.username }}')">
+          <i class="fas fa-comment"></i> Send Message
+        </button>
+        {% if owner.email %}
+          <button class="comm-btn comm-btn-email" onclick="sendEmailToCandidate({{ owner.id }}, '{{ owner.email }}', '{{ owner.username }}')">
+            <i class="fas fa-envelope"></i> Send Email
+          </button>
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 
   <div style="display:grid; gap:16px; margin-top:16px;">
@@ -48,4 +101,281 @@
     {% endif %}
   </div>
 </section>
+
+<!-- Communication Modals (same as recruiter dashboard) -->
+<div id="sendMessageModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Send Message</h3>
+      <span class="close" onclick="closeModal('sendMessageModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="sendMessageForm">
+        {% csrf_token %}
+        <input type="hidden" id="messageRecipientId" name="recipient_id">
+        <div class="form-group">
+          <label for="messageSubject">Subject:</label>
+          <input type="text" id="messageSubject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="messageBody">Message:</label>
+          <textarea id="messageBody" name="body" rows="5" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" onclick="closeModal('sendMessageModal')" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="sendEmailModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Send Email</h3>
+      <span class="close" onclick="closeModal('sendEmailModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="sendEmailForm">
+        {% csrf_token %}
+        <input type="hidden" id="emailRecipientId" name="recipient_id">
+        <div class="form-group">
+          <label for="emailRecipient">To:</label>
+          <input type="email" id="emailRecipient" readonly>
+        </div>
+        <div class="form-group">
+          <label for="emailSubject">Subject:</label>
+          <input type="text" id="emailSubject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="emailBody">Message:</label>
+          <textarea id="emailBody" name="body" rows="5" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" onclick="closeModal('sendEmailModal')" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send Email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Include the same modal styles and JavaScript as recruiter dashboard
+const modalStyles = `
+  .modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .modal-header h3 {
+    margin: 0;
+    color: var(--gt-navy);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .close {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--muted);
+    line-height: 1;
+  }
+  
+  .close:hover {
+    color: var(--gt-navy);
+  }
+  
+  .modal-body {
+    padding: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--gt-navy);
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--gt-gold);
+    box-shadow: 0 0 0 3px rgba(179, 163, 105, 0.1);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  
+  .btn-primary, .btn-secondary {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-primary {
+    background: var(--gt-navy);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: #002244;
+  }
+  
+  .btn-secondary {
+    background: #f3f4f6;
+    color: var(--gt-navy);
+    border: 1px solid #d1d5db;
+  }
+  
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+`;
+
+// Add styles to head
+const styleSheet = document.createElement("style");
+styleSheet.textContent = modalStyles;
+document.head.appendChild(styleSheet);
+
+// Modal functions
+function openModal(modalId) {
+  document.getElementById(modalId).style.display = 'flex';
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  if (event.target.classList.contains('modal')) {
+    event.target.style.display = 'none';
+  }
+}
+
+// Send message form
+document.getElementById('sendMessageForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const recipientId = document.getElementById('messageRecipientId').value;
+  
+  fetch(`{% url "accounts:send_message" 0 %}`.replace('0', recipientId), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Message sent successfully!');
+      closeModal('sendMessageModal');
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending message');
+  });
+});
+
+// Send email form
+document.getElementById('sendEmailForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const recipientId = document.getElementById('emailRecipientId').value;
+  
+  fetch(`{% url "accounts:send_email" 0 %}`.replace('0', recipientId), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Email sent successfully!');
+      closeModal('sendEmailModal');
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending email');
+  });
+});
+
+// Helper function to open send message modal for a specific candidate
+function sendMessageToCandidate(recipientId, recipientName) {
+  document.getElementById('messageRecipientId').value = recipientId;
+  document.getElementById('messageSubject').value = `Message to ${recipientName}`;
+  document.getElementById('messageBody').value = '';
+  openModal('sendMessageModal');
+}
+
+// Helper function to open send email modal for a specific candidate
+function sendEmailToCandidate(recipientId, recipientEmail, recipientName) {
+  document.getElementById('emailRecipientId').value = recipientId;
+  document.getElementById('emailRecipient').value = recipientEmail;
+  document.getElementById('emailSubject').value = `Message from GT Job Finder`;
+  document.getElementById('emailBody').value = `Dear ${recipientName},\n\n`;
+  openModal('sendEmailModal');
+}
+</script>
 {% endblock %}

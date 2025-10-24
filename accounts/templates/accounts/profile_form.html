@@ -12,6 +12,11 @@
     <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
       <h3 style="margin:0 0 8px; color:var(--gt-navy);">Basics</h3>
       {{ form.headline.errors }} {{ form.headline.label_tag }} {{ form.headline }}
+      
+      <div style="margin-top: 16px;">
+        {{ form.email.errors }} {{ form.email.label_tag }} {{ form.email }}
+        <p style="margin:6px 0 0; color:#6b7280; font-size: 14px;">{{ form.email.help_text }}</p>
+      </div>
     </div>
 
     <!-- Content sections -->

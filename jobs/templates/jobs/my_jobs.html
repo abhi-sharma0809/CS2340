@@ -94,6 +94,17 @@
     color: white;
   }
   
+  .btn-gold {
+    background: var(--gt-gold);
+    color: var(--gt-navy);
+    border: none;
+  }
+  
+  .btn-gold:hover {
+    background: #a6955a;
+    color: white;
+  }
+  
   .job-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -208,6 +219,7 @@
           </div>
           <div class="job-actions">
             <a href="{% url 'jobs:edit' job.pk %}" class="btn-sm btn-outline">Edit</a>
+            <a href="{% url 'jobs:applicants' job.pk %}" class="btn-sm btn-gold">Applicants</a>
             <a href="{% url 'jobs:detail' job.pk %}" class="btn-sm btn-primary">View</a>
           </div>
         </div>

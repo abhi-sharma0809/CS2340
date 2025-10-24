@@ -3,21 +3,27 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Profile, RecruiterProfile
-from .forms import ProfileForm, RecruiterRegistrationForm, RecruiterProfileForm
+from django.http import JsonResponse, HttpResponseForbidden
+from django.core.mail import send_mail
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+from django.db import models
+from .models import Profile, RecruiterProfile, Message, EmailLog
+from .forms import ProfileForm, RecruiterRegistrationForm, RecruiterProfileForm, JobSeekerRegistrationForm
 from django.contrib.auth.models import User
-from django.http import HttpResponseForbidden
 
 def signup(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = JobSeekerRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
             Profile.objects.get_or_create(user=user)  # create blank profile
             login(request, user)
             return redirect("accounts:profile")
     else:
-        form = UserCreationForm()
+        form = JobSeekerRegistrationForm()
     return render(request, "registration/signup.html", {"form": form})
 
 
@@ -123,3 +129,188 @@ def recruiter_dashboard(request):
         "jobs": jobs,
         "total_applications": total_applications
     })
+
+
+# Communication Views (CRM-22 & CRM-23)
+
+@login_required
+def send_message(request, recipient_id):
+    """Send an in-platform message to a candidate (CRM-22)"""
+    recipient = get_object_or_404(User, id=recipient_id)
+    
+    # Check if sender is a recruiter
+    try:
+        sender_profile = Profile.objects.get(user=request.user)
+        if not sender_profile.is_recruiter:
+            return JsonResponse({'error': 'Only recruiters can send messages'}, status=403)
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'Profile not found'}, status=404)
+    
+    if request.method == 'POST':
+        subject = request.POST.get('subject', '').strip()
+        body = request.POST.get('body', '').strip()
+        job_application_id = request.POST.get('job_application_id')
+        
+        if not subject or not body:
+            return JsonResponse({'error': 'Subject and body are required'}, status=400)
+        
+        # Create message
+        message = Message.objects.create(
+            sender=request.user,
+            recipient=recipient,
+            subject=subject,
+            body=body
+        )
+        
+        # Link to job application if provided
+        if job_application_id:
+            try:
+                from jobs.models import JobApplication
+                job_app = JobApplication.objects.get(id=job_application_id)
+                message.job_application = job_app
+                message.save()
+            except JobApplication.DoesNotExist:
+                pass
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Message sent successfully',
+            'message_id': message.id
+        })
+    
+    return JsonResponse({'error': 'POST method required'}, status=405)
+
+
+@login_required
+def send_email(request, recipient_id):
+    """Send an email to a candidate through the platform (CRM-23)"""
+    recipient = get_object_or_404(User, id=recipient_id)
+    
+    # Check if sender is a recruiter
+    try:
+        sender_profile = Profile.objects.get(user=request.user)
+        if not sender_profile.is_recruiter:
+            return JsonResponse({'error': 'Only recruiters can send emails'}, status=403)
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'Profile not found'}, status=404)
+    
+    if request.method == 'POST':
+        subject = request.POST.get('subject', '').strip()
+        body = request.POST.get('body', '').strip()
+        job_application_id = request.POST.get('job_application_id')
+        
+        if not subject or not body:
+            return JsonResponse({'error': 'Subject and body are required'}, status=400)
+        
+        if not recipient.email:
+            return JsonResponse({'error': 'Recipient has no email address'}, status=400)
+        
+        # Create email log entry
+        email_log = EmailLog.objects.create(
+            sender=request.user,
+            recipient_email=recipient.email,
+            recipient_name=f"{recipient.first_name} {recipient.last_name}".strip() or recipient.username,
+            subject=subject,
+            body=body,
+            status='pending'
+        )
+        
+        # Link to job application if provided
+        if job_application_id:
+            try:
+                from jobs.models import JobApplication
+                job_app = JobApplication.objects.get(id=job_application_id)
+                email_log.job_application = job_app
+                email_log.save()
+            except JobApplication.DoesNotExist:
+                pass
+        
+        # Send the actual email
+        try:
+            send_mail(
+                subject=f"[GT Job Finder] {subject}",
+                message=body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[recipient.email],
+                fail_silently=False,
+            )
+            email_log.status = 'sent'
+            email_log.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Email sent successfully',
+                'email_id': email_log.id
+            })
+        except Exception as e:
+            email_log.status = 'failed'
+            email_log.error_message = str(e)
+            email_log.save()
+            
+            return JsonResponse({
+                'error': f'Failed to send email: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'error': 'POST method required'}, status=405)
+
+
+@login_required
+def get_messages(request):
+    """Get messages for the current user"""
+    user_messages = Message.objects.filter(
+        models.Q(sender=request.user) | models.Q(recipient=request.user)
+    ).order_by('-timestamp')[:50]  # Limit to recent 50 messages
+    
+    messages_data = []
+    for msg in user_messages:
+        messages_data.append({
+            'id': msg.id,
+            'sender': msg.sender.username,
+            'recipient': msg.recipient.username,
+            'subject': msg.subject,
+            'body': msg.body,
+            'timestamp': msg.timestamp.isoformat(),
+            'is_read': msg.is_read,
+            'is_sent_by_me': msg.sender == request.user,
+            'job_title': msg.job_application.job.title if msg.job_application else None
+        })
+    
+    return JsonResponse({'messages': messages_data})
+
+
+@login_required
+def get_emails(request):
+    """Get emails sent by the current user (recruiters only)"""
+    try:
+        sender_profile = Profile.objects.get(user=request.user)
+        if not sender_profile.is_recruiter:
+            return JsonResponse({'error': 'Only recruiters can view email logs'}, status=403)
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'Profile not found'}, status=404)
+    
+    emails = EmailLog.objects.filter(sender=request.user).order_by('-timestamp')[:50]
+    
+    emails_data = []
+    for email in emails:
+        emails_data.append({
+            'id': email.id,
+            'recipient_email': email.recipient_email,
+            'recipient_name': email.recipient_name,
+            'subject': email.subject,
+            'body': email.body,
+            'timestamp': email.timestamp.isoformat(),
+            'status': email.status,
+            'job_title': email.job_application.job.title if email.job_application else None
+        })
+    
+    return JsonResponse({'emails': emails_data})
+
+
+@login_required
+def mark_message_read(request, message_id):
+    """Mark a message as read"""
+    message = get_object_or_404(Message, id=message_id, recipient=request.user)
+    message.is_read = True
+    message.save()
+    
+    return JsonResponse({'success': True})

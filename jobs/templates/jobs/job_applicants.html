@@ -1,0 +1,661 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Applicants for {{ job.title }} - GT Job Finder{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header {
+    text-align: center;
+    margin: 40px 0;
+  }
+  
+  .page-header h1 {
+    color: var(--gt-navy);
+    margin-bottom: 10px;
+  }
+  
+  .page-header p {
+    color: var(--muted);
+    font-size: 16px;
+  }
+  
+  .applicants-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .job-info {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+    padding: 24px;
+  }
+  
+  .job-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--gt-navy);
+    margin-bottom: 8px;
+  }
+  
+  .job-company {
+    color: var(--muted);
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+  
+  .job-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  
+  .job-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  
+  .job-detail i {
+    color: var(--gt-gold);
+    width: 16px;
+  }
+  
+  .applicant-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    padding: 24px;
+    transition: box-shadow 0.2s;
+  }
+  
+  .applicant-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .applicant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  
+  .applicant-info h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gt-navy);
+    margin-bottom: 4px;
+  }
+  
+  .applicant-email {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  
+  .applicant-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-primary {
+    background: var(--gt-navy);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: #002244;
+    color: white;
+  }
+  
+  .btn-gold {
+    background: var(--gt-gold);
+    color: var(--gt-navy);
+  }
+  
+  .btn-gold:hover {
+    background: #a6955a;
+    color: white;
+  }
+  
+  .btn-outline {
+    background: transparent;
+    color: var(--gt-navy);
+    border: 1px solid var(--gt-navy);
+  }
+  
+  .btn-outline:hover {
+    background: var(--gt-navy);
+    color: white;
+  }
+  
+  .applicant-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .applicant-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  
+  .applicant-detail i {
+    color: var(--gt-gold);
+    width: 16px;
+  }
+  
+  .application-note {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--gt-gold);
+  }
+  
+  .application-note h4 {
+    color: var(--gt-navy);
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .application-note p {
+    color: var(--text);
+    margin: 0;
+    line-height: 1.5;
+  }
+  
+  .application-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .status-applied {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .status-reviewed {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .status-interview {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  .status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .status-accepted {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  
+  .empty-state i {
+    font-size: 48px;
+    color: var(--gt-gold);
+    margin-bottom: 16px;
+  }
+  
+  .empty-state h3 {
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  
+  .back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--gt-gold);
+    color: var(--gt-navy);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    margin-bottom: 20px;
+    transition: background-color 0.2s;
+  }
+  
+  .back-button:hover {
+    background: #a6955a;
+    color: white;
+  }
+  
+  /* Modal Styles (same as communication modals) */
+  .modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .modal-header h3 {
+    margin: 0;
+    color: var(--gt-navy);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .close {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--muted);
+    line-height: 1;
+  }
+  
+  .close:hover {
+    color: var(--gt-navy);
+  }
+  
+  .modal-body {
+    padding: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--gt-navy);
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--gt-gold);
+    box-shadow: 0 0 0 3px rgba(179, 163, 105, 0.1);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  
+  .btn-secondary {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    color: var(--gt-navy);
+  }
+  
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="applicants-container">
+  <a href="{% url 'jobs:my_jobs' %}" class="back-button">
+    <i class="fas fa-arrow-left"></i>
+    Back to My Jobs
+  </a>
+  
+  <div class="page-header">
+    <h1>Job Applicants</h1>
+    <p>Review and communicate with candidates who applied to your job</p>
+  </div>
+
+  <div class="job-info">
+    <div class="job-title">{{ job.title }}</div>
+    <div class="job-company">{{ job.company_name|default:"Company not specified" }}</div>
+    
+    <div class="job-details">
+      {% if job.location %}
+        <div class="job-detail">
+          <i class="fas fa-map-marker-alt"></i>
+          <span>{{ job.location }}</span>
+        </div>
+      {% endif %}
+      
+      {% if job.salary_min or job.salary_max %}
+        <div class="job-detail">
+          <i class="fas fa-dollar-sign"></i>
+          <span>
+            {% if job.salary_min and job.salary_max %}
+              ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}
+            {% elif job.salary_min %}
+              ${{ job.salary_min|floatformat:0 }}+
+            {% elif job.salary_max %}
+              Up to ${{ job.salary_max|floatformat:0 }}
+            {% endif %}
+          </span>
+        </div>
+      {% endif %}
+      
+      {% if job.is_remote %}
+        <div class="job-detail">
+          <i class="fas fa-home"></i>
+          <span>Remote</span>
+        </div>
+      {% endif %}
+      
+      {% if job.visa_sponsorship %}
+        <div class="job-detail">
+          <i class="fas fa-passport"></i>
+          <span>Visa Sponsorship</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if applications %}
+    {% for application in applications %}
+      <div class="applicant-card">
+        <div class="applicant-header">
+          <div class="applicant-info">
+            <h3>{{ application.user.get_full_name|default:application.user.username }}</h3>
+            <div class="applicant-email">{{ application.user.email }}</div>
+          </div>
+          <div class="applicant-actions">
+            <button class="btn-sm btn-gold" onclick="sendMessageToCandidate({{ application.user.id }}, '{{ application.user.username }}', {{ application.id }})">
+              <i class="fas fa-comment"></i> Message
+            </button>
+            {% if application.user.email %}
+              <button class="btn-sm btn-primary" onclick="sendEmailToCandidate({{ application.user.id }}, '{{ application.user.email }}', '{{ application.user.username }}', {{ application.id }})">
+                <i class="fas fa-envelope"></i> Email
+              </button>
+            {% endif %}
+            <a href="{% url 'accounts:public_profile' application.user.username %}" class="btn-sm btn-outline">
+              <i class="fas fa-user"></i> Profile
+            </a>
+          </div>
+        </div>
+        
+        {% if application.user.profile %}
+          <div class="applicant-details">
+            {% if application.user.profile.headline %}
+              <div class="applicant-detail">
+                <i class="fas fa-tag"></i>
+                <span>{{ application.user.profile.headline }}</span>
+              </div>
+            {% endif %}
+            
+            {% if application.user.profile.skills %}
+              <div class="applicant-detail">
+                <i class="fas fa-tools"></i>
+                <span>{{ application.user.profile.skills|truncatewords:10 }}</span>
+              </div>
+            {% endif %}
+            
+            {% if application.user.profile.commute_radius_km %}
+              <div class="applicant-detail">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>Commute radius: {{ application.user.profile.commute_radius_km }}km</span>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+        
+        {% if application.note %}
+          <div class="application-note">
+            <h4>Application Note:</h4>
+            <p>{{ application.note }}</p>
+          </div>
+        {% endif %}
+        
+        <div class="application-meta">
+          <div>
+            <span class="status-badge status-{{ application.status }}">{{ application.get_status_display }}</span>
+          </div>
+          <div>
+            <i class="fas fa-calendar"></i>
+            <span>Applied {{ application.applied_at|date:"M d, Y" }}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="fas fa-users"></i>
+      <h3>No applicants yet</h3>
+      <p>This job hasn't received any applications yet. Share the job posting to attract candidates!</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Communication Modals -->
+<div id="sendMessageModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Send Message</h3>
+      <span class="close" onclick="closeModal('sendMessageModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="sendMessageForm">
+        {% csrf_token %}
+        <input type="hidden" id="messageRecipientId" name="recipient_id">
+        <input type="hidden" id="messageJobApplicationId" name="job_application_id">
+        <div class="form-group">
+          <label for="messageSubject">Subject:</label>
+          <input type="text" id="messageSubject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="messageBody">Message:</label>
+          <textarea id="messageBody" name="body" rows="5" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" onclick="closeModal('sendMessageModal')" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="sendEmailModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Send Email</h3>
+      <span class="close" onclick="closeModal('sendEmailModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="sendEmailForm">
+        {% csrf_token %}
+        <input type="hidden" id="emailRecipientId" name="recipient_id">
+        <input type="hidden" id="emailJobApplicationId" name="job_application_id">
+        <div class="form-group">
+          <label for="emailRecipient">To:</label>
+          <input type="email" id="emailRecipient" readonly>
+        </div>
+        <div class="form-group">
+          <label for="emailSubject">Subject:</label>
+          <input type="text" id="emailSubject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="emailBody">Message:</label>
+          <textarea id="emailBody" name="body" rows="5" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" onclick="closeModal('sendEmailModal')" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send Email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Modal functions
+function openModal(modalId) {
+  document.getElementById(modalId).style.display = 'flex';
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  if (event.target.classList.contains('modal')) {
+    event.target.style.display = 'none';
+  }
+}
+
+// Send message form
+document.getElementById('sendMessageForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const recipientId = document.getElementById('messageRecipientId').value;
+  
+  fetch(`{% url "accounts:send_message" 0 %}`.replace('0', recipientId), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Message sent successfully!');
+      closeModal('sendMessageModal');
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending message');
+  });
+});
+
+// Send email form
+document.getElementById('sendEmailForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const recipientId = document.getElementById('emailRecipientId').value;
+  
+  fetch(`{% url "accounts:send_email" 0 %}`.replace('0', recipientId), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Email sent successfully!');
+      closeModal('sendEmailModal');
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending email');
+  });
+});
+
+// Helper function to open send message modal for a specific candidate
+function sendMessageToCandidate(recipientId, recipientName, jobApplicationId) {
+  document.getElementById('messageRecipientId').value = recipientId;
+  document.getElementById('messageJobApplicationId').value = jobApplicationId;
+  document.getElementById('messageSubject').value = `Message regarding {{ job.title }}`;
+  document.getElementById('messageBody').value = `Dear ${recipientName},\n\n`;
+  openModal('sendMessageModal');
+}
+
+// Helper function to open send email modal for a specific candidate
+function sendEmailToCandidate(recipientId, recipientEmail, recipientName, jobApplicationId) {
+  document.getElementById('emailRecipientId').value = recipientId;
+  document.getElementById('emailJobApplicationId').value = jobApplicationId;
+  document.getElementById('emailRecipient').value = recipientEmail;
+  document.getElementById('emailSubject').value = `Regarding your application for {{ job.title }}`;
+  document.getElementById('emailBody').value = `Dear ${recipientName},\n\nThank you for your interest in the {{ job.title }} position.\n\n`;
+  openModal('sendEmailModal');
+}
+</script>
+{% endblock %}

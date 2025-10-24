@@ -255,3 +255,58 @@ def my_jobs(request):
     return render(request, 'jobs/my_jobs.html', {
         'jobs': jobs
     })
+
+@login_required
+def job_applicants(request, pk):
+    """View for recruiters to see all applicants for a specific job"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    job = get_object_or_404(Job, pk=pk)
+    applications = JobApplication.objects.filter(job=job).select_related('user', 'user__profile').order_by('-applied_at')
+    
+    return render(request, 'jobs/job_applicants.html', {
+        'job': job,
+        'applications': applications
+    })
+
+def search_candidates(request):
+    """API endpoint to search for candidates (job seekers)"""
+    query = request.GET.get('search', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse({'candidates': []})
+    
+    # Search for job seekers by username, email, or profile info
+    from django.contrib.auth.models import User
+    from accounts.models import Profile
+    
+    # Get all job seekers
+    job_seekers = User.objects.filter(
+        profile__user_type='job_seeker'
+    ).select_related('profile')
+    
+    # Filter by search query
+    candidates = []
+    for user in job_seekers:
+        if (query.lower() in user.username.lower() or 
+            query.lower() in user.email.lower() or
+            (user.first_name and query.lower() in user.first_name.lower()) or
+            (user.last_name and query.lower() in user.last_name.lower()) or
+            (user.profile.headline and query.lower() in user.profile.headline.lower())):
+            
+            candidates.append({
+                'id': user.id,
+                'name': user.get_full_name() or user.username,
+                'email': user.email,
+                'username': user.username
+            })
+    
+    return JsonResponse({'candidates': candidates[:10]})  # Limit to 10 results

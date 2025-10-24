@@ -120,6 +120,22 @@
         </div>
 
         <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
+          <h3 style="margin:0 0 8px; color:var(--gt-navy);">Contact Information</h3>
+          {% if request.user.email %}
+            <p style="margin:0 0 8px;"><strong>Email:</strong> {{ request.user.email }}</p>
+            <p style="margin:0; font-size:12px; color:#6b7280;">Recruiters can contact you at this email address</p>
+          {% else %}
+            <div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:8px;">
+              <p style="margin:0; color:#92400e; font-size:14px;">
+                <strong>⚠️ No email address</strong><br>
+                Add your email so recruiters can contact you about job opportunities.
+              </p>
+            </div>
+            <a class="cta" href="{% url 'accounts:profile_edit' %}" style="font-size:14px; padding:8px 16px;">Add Email Address</a>
+          {% endif %}
+        </div>
+
+        <div style="background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; padding:18px;">
           <h3 style="margin:0 0 8px; color:var(--gt-navy);">Commute</h3>
           <p style="margin:0;">Preferred radius: <strong>{{ profile.commute_radius_km }} km</strong></p>
         </div>

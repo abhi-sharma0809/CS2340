@@ -176,6 +176,17 @@
     color: white;
   }
   
+  .btn-gold {
+    background: var(--gt-gold);
+    color: var(--gt-navy);
+    border: none;
+  }
+  
+  .btn-gold:hover {
+    background: #a6955a;
+    color: white;
+  }
+  
   .quick-actions {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -277,6 +288,173 @@
     .dashboard-sections {
       grid-template-columns: 1fr;
     }
+  }
+  
+  /* Modal Styles */
+  .modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .modal-header h3 {
+    margin: 0;
+    color: var(--gt-navy);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .close {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--muted);
+    line-height: 1;
+  }
+  
+  .close:hover {
+    color: var(--gt-navy);
+  }
+  
+  .modal-body {
+    padding: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--gt-navy);
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--gt-gold);
+    box-shadow: 0 0 0 3px rgba(179, 163, 105, 0.1);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  
+  .btn-primary, .btn-secondary {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-primary {
+    background: var(--gt-navy);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: #002244;
+  }
+  
+  .btn-secondary {
+    background: #f3f4f6;
+    color: var(--gt-navy);
+    border: 1px solid #d1d5db;
+  }
+  
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+  
+  .message-item, .email-item {
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: #f9fafb;
+  }
+  
+  .message-header, .email-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .message-subject, .email-subject {
+    font-weight: 600;
+    color: var(--gt-navy);
+  }
+  
+  .message-meta, .email-meta {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  
+  .message-body, .email-body {
+    margin-top: 8px;
+    color: #374151;
+    line-height: 1.5;
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+  }
+  
+  .empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--gt-gold);
   }
 </style>
 {% endblock %}
@@ -382,6 +560,30 @@
         View Analytics
       </a>
     </div>
+    
+    <div class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-comments"></i>
+      </div>
+      <div class="action-title">Messages</div>
+      <div class="action-description">Send messages to candidates through the platform</div>
+      <button onclick="openMessagesModal()" class="action-button">
+        <i class="fas fa-comment"></i>
+        View Messages
+      </button>
+    </div>
+    
+    <div class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-envelope"></i>
+      </div>
+      <div class="action-title">Email Center</div>
+      <div class="action-description">Send emails to candidates through the platform</div>
+      <button onclick="openEmailsModal()" class="action-button">
+        <i class="fas fa-mail-bulk"></i>
+        View Emails
+      </button>
+    </div>
   </div>
   
   <div class="dashboard-sections">
@@ -406,6 +608,7 @@
             </div>
             <div class="job-actions">
               <a href="{% url 'jobs:edit' job.pk %}" class="btn-sm btn-outline">Edit</a>
+              <a href="{% url 'jobs:applicants' job.pk %}" class="btn-sm btn-gold">Applicants</a>
               <a href="{% url 'jobs:detail' job.pk %}" class="btn-sm btn-primary">View</a>
             </div>
           </div>
@@ -445,5 +648,426 @@
     </div>
   </div>
 </div>
+
+<!-- Communication Modals -->
+<div id="messagesModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Messages</h3>
+      <span class="close" onclick="closeModal('messagesModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div id="messagesList">
+        <div class="loading">Loading messages...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="emailsModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Email Center</h3>
+      <div style="display: flex; gap: 10px;">
+        <button onclick="openComposeEmailModal()" class="btn-primary" style="padding: 8px 16px; font-size: 14px;">
+          <i class="fas fa-plus"></i> Compose Email
+        </button>
+        <span class="close" onclick="closeModal('emailsModal')">&times;</span>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="emailsList">
+        <div class="loading">Loading emails...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sendMessageModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Send Message</h3>
+      <span class="close" onclick="closeModal('sendMessageModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="sendMessageForm">
+        {% csrf_token %}
+        <input type="hidden" id="messageRecipientId" name="recipient_id">
+        <div class="form-group">
+          <label for="messageSubject">Subject:</label>
+          <input type="text" id="messageSubject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="messageBody">Message:</label>
+          <textarea id="messageBody" name="body" rows="5" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" onclick="closeModal('sendMessageModal')" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="sendEmailModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Send Email</h3>
+      <span class="close" onclick="closeModal('sendEmailModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="sendEmailForm">
+        {% csrf_token %}
+        <input type="hidden" id="emailRecipientId" name="recipient_id">
+        <div class="form-group">
+          <label for="emailRecipient">To:</label>
+          <input type="email" id="emailRecipient" readonly>
+        </div>
+        <div class="form-group">
+          <label for="emailSubject">Subject:</label>
+          <input type="text" id="emailSubject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="emailBody">Message:</label>
+          <textarea id="emailBody" name="body" rows="5" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" onclick="closeModal('sendEmailModal')" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send Email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="composeEmailModal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 800px;">
+    <div class="modal-header">
+      <h3>Compose New Email</h3>
+      <span class="close" onclick="closeModal('composeEmailModal')">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="composeEmailForm">
+        {% csrf_token %}
+        <input type="hidden" id="composeRecipientId" name="recipient_id">
+        <div class="form-group">
+          <label for="candidateSearch">Search Candidate:</label>
+          <input type="text" id="candidateSearch" placeholder="Type candidate name or email..." autocomplete="off">
+          <div id="candidateResults" style="max-height: 200px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 8px; display: none;">
+            <!-- Candidate search results will appear here -->
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="composeEmailRecipient">To:</label>
+          <input type="email" id="composeEmailRecipient" readonly placeholder="Select a candidate above">
+        </div>
+        <div class="form-group">
+          <label for="composeEmailSubject">Subject:</label>
+          <input type="text" id="composeEmailSubject" name="subject" required placeholder="Enter email subject">
+        </div>
+        <div class="form-group">
+          <label for="composeEmailBody">Message:</label>
+          <textarea id="composeEmailBody" name="body" rows="6" required placeholder="Write your email message here..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" onclick="closeModal('composeEmailModal')" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Send Email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Modal functions
+function openModal(modalId) {
+  document.getElementById(modalId).style.display = 'flex';
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  if (event.target.classList.contains('modal')) {
+    event.target.style.display = 'none';
+  }
+}
+
+// Messages functionality
+function openMessagesModal() {
+  openModal('messagesModal');
+  loadMessages();
+}
+
+function loadMessages() {
+  const messagesList = document.getElementById('messagesList');
+  messagesList.innerHTML = '<div class="loading">Loading messages...</div>';
+  
+  fetch('{% url "accounts:get_messages" %}')
+    .then(response => response.json())
+    .then(data => {
+      if (data.messages && data.messages.length > 0) {
+        messagesList.innerHTML = data.messages.map(msg => `
+          <div class="message-item">
+            <div class="message-header">
+              <div class="message-subject">${msg.subject}</div>
+              <div class="message-meta">${new Date(msg.timestamp).toLocaleDateString()}</div>
+            </div>
+            <div class="message-meta">
+              ${msg.is_sent_by_me ? 'To' : 'From'}: ${msg.is_sent_by_me ? msg.recipient : msg.sender}
+              ${msg.job_title ? ` • ${msg.job_title}` : ''}
+            </div>
+            <div class="message-body">${msg.body}</div>
+          </div>
+        `).join('');
+      } else {
+        messagesList.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-comments"></i>
+            <h4>No messages yet</h4>
+            <p>Start communicating with candidates!</p>
+          </div>
+        `;
+      }
+    })
+    .catch(error => {
+      messagesList.innerHTML = '<div class="loading">Error loading messages</div>';
+    });
+}
+
+// Emails functionality
+function openEmailsModal() {
+  openModal('emailsModal');
+  loadEmails();
+}
+
+function loadEmails() {
+  const emailsList = document.getElementById('emailsList');
+  emailsList.innerHTML = '<div class="loading">Loading emails...</div>';
+  
+  fetch('{% url "accounts:get_emails" %}')
+    .then(response => response.json())
+    .then(data => {
+      if (data.emails && data.emails.length > 0) {
+        emailsList.innerHTML = data.emails.map(email => `
+          <div class="email-item">
+            <div class="email-header">
+              <div class="email-subject">${email.subject}</div>
+              <div class="email-meta">${new Date(email.timestamp).toLocaleDateString()}</div>
+            </div>
+            <div class="email-meta">
+              To: ${email.recipient_name} (${email.recipient_email})
+              ${email.job_title ? ` • ${email.job_title}` : ''}
+              • Status: <span style="color: ${email.status === 'sent' ? 'green' : email.status === 'failed' ? 'red' : 'orange'}">${email.status}</span>
+            </div>
+            <div class="email-body">${email.body}</div>
+          </div>
+        `).join('');
+      } else {
+        emailsList.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-envelope"></i>
+            <h4>No emails sent yet</h4>
+            <p>Start reaching out to candidates via email!</p>
+          </div>
+        `;
+      }
+    })
+    .catch(error => {
+      emailsList.innerHTML = '<div class="loading">Error loading emails</div>';
+    });
+}
+
+// Send message form
+document.getElementById('sendMessageForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const recipientId = document.getElementById('messageRecipientId').value;
+  
+  fetch(`{% url "accounts:send_message" 0 %}`.replace('0', recipientId), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Message sent successfully!');
+      closeModal('sendMessageModal');
+      loadMessages();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending message');
+  });
+});
+
+// Send email form
+document.getElementById('sendEmailForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const recipientId = document.getElementById('emailRecipientId').value;
+  
+  fetch(`{% url "accounts:send_email" 0 %}`.replace('0', recipientId), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Email sent successfully!');
+      closeModal('sendEmailModal');
+      loadEmails();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending email');
+  });
+});
+
+// Helper function to open send message modal for a specific candidate
+function sendMessageToCandidate(recipientId, recipientName) {
+  document.getElementById('messageRecipientId').value = recipientId;
+  document.getElementById('messageSubject').value = `Message to ${recipientName}`;
+  document.getElementById('messageBody').value = '';
+  openModal('sendMessageModal');
+}
+
+// Helper function to open send email modal for a specific candidate
+function sendEmailToCandidate(recipientId, recipientEmail, recipientName) {
+  document.getElementById('emailRecipientId').value = recipientId;
+  document.getElementById('emailRecipient').value = recipientEmail;
+  document.getElementById('emailSubject').value = `Message from GT Job Finder`;
+  document.getElementById('emailBody').value = `Dear ${recipientName},\n\n`;
+  openModal('sendEmailModal');
+}
+
+// Compose Email functionality
+function openComposeEmailModal() {
+  openModal('composeEmailModal');
+  // Clear form
+  document.getElementById('candidateSearch').value = '';
+  document.getElementById('composeEmailRecipient').value = '';
+  document.getElementById('composeEmailSubject').value = '';
+  document.getElementById('composeEmailBody').value = '';
+  document.getElementById('composeRecipientId').value = '';
+  document.getElementById('candidateResults').style.display = 'none';
+}
+
+// Candidate search functionality
+let searchTimeout;
+document.getElementById('candidateSearch').addEventListener('input', function(e) {
+  const query = e.target.value.trim();
+  const resultsDiv = document.getElementById('candidateResults');
+  
+  clearTimeout(searchTimeout);
+  
+  if (query.length < 2) {
+    resultsDiv.style.display = 'none';
+    return;
+  }
+  
+  searchTimeout = setTimeout(() => {
+    searchCandidates(query);
+  }, 300);
+});
+
+function searchCandidates(query) {
+  const resultsDiv = document.getElementById('candidateResults');
+  
+  // For now, we'll use a simple approach - in a real app you'd have an API endpoint
+  // We'll search through job seekers who have applied to jobs
+  fetch(`{% url "jobs:search_candidates" %}?search=${encodeURIComponent(query)}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.candidates && data.candidates.length > 0) {
+        resultsDiv.innerHTML = data.candidates.map(candidate => `
+          <div class="candidate-result" onclick="selectCandidate(${candidate.id}, '${candidate.email}', '${candidate.name}')" 
+               style="padding: 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-weight: 500; color: var(--gt-navy);">${candidate.name}</div>
+            <div style="font-size: 12px; color: var(--muted);">${candidate.email}</div>
+          </div>
+        `).join('');
+        resultsDiv.style.display = 'block';
+      } else {
+        resultsDiv.innerHTML = '<div style="padding: 12px; color: var(--muted);">No candidates found</div>';
+        resultsDiv.style.display = 'block';
+      }
+    })
+    .catch(error => {
+      // Fallback: show some demo candidates
+      resultsDiv.innerHTML = `
+        <div class="candidate-result" onclick="selectCandidate(1, 'demo@example.com', 'Demo Candidate')" 
+             style="padding: 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb;">
+          <div style="font-weight: 500; color: var(--gt-navy);">Demo Candidate</div>
+          <div style="font-size: 12px; color: var(--muted);">demo@example.com</div>
+        </div>
+        <div class="candidate-result" onclick="selectCandidate(2, 'test@example.com', 'Test User')" 
+             style="padding: 12px; cursor: pointer;">
+          <div style="font-weight: 500; color: var(--gt-navy);">Test User</div>
+          <div style="font-size: 12px; color: var(--muted);">test@example.com</div>
+        </div>
+      `;
+      resultsDiv.style.display = 'block';
+    });
+}
+
+function selectCandidate(id, email, name) {
+  document.getElementById('composeRecipientId').value = id;
+  document.getElementById('composeEmailRecipient').value = email;
+  document.getElementById('candidateSearch').value = name;
+  document.getElementById('candidateResults').style.display = 'none';
+}
+
+// Compose email form submission
+document.getElementById('composeEmailForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const recipientId = document.getElementById('composeRecipientId').value;
+  
+  if (!recipientId) {
+    alert('Please select a candidate first');
+    return;
+  }
+  
+  fetch(`{% url "accounts:send_email" 0 %}`.replace('0', recipientId), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Email sent successfully!');
+      closeModal('composeEmailModal');
+      loadEmails();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending email');
+  });
+});
+</script>
 {% endblock %}
 
