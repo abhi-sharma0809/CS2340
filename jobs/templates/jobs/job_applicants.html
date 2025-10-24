@@ -383,6 +383,11 @@
   <div class="page-header">
     <h1>Job Applicants</h1>
     <p>Review and communicate with candidates who applied to your job</p>
+    <div class="mt-3">
+      <a href="{% url 'jobs:pipeline_management' job.pk %}" class="btn btn-primary">
+        <i class="fas fa-columns"></i> Pipeline Management
+      </a>
+    </div>
   </div>
 
   <div class="job-info">

@@ -584,6 +584,42 @@
         View Emails
       </button>
     </div>
+    
+    <div class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-search"></i>
+      </div>
+      <div class="action-title">Candidate Search</div>
+      <div class="action-description">Search for candidates by skills, location, and experience</div>
+      <a href="{% url 'jobs:candidate_search' %}" class="action-button">
+        <i class="fas fa-search"></i>
+        Search Candidates
+      </a>
+    </div>
+    
+    <div class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-bookmark"></i>
+      </div>
+      <div class="action-title">Saved Searches</div>
+      <div class="action-description">Manage your saved candidate searches and notifications</div>
+      <a href="{% url 'jobs:saved_searches' %}" class="action-button">
+        <i class="fas fa-bookmark"></i>
+        View Searches
+      </a>
+    </div>
+    
+    <div class="action-card">
+      <div class="action-icon">
+        <i class="fas fa-columns"></i>
+      </div>
+      <div class="action-title">Pipeline Management</div>
+      <div class="action-description">Organize applicants in a Kanban board pipeline</div>
+      <a href="{% url 'jobs:my_jobs' %}" class="action-button">
+        <i class="fas fa-columns"></i>
+        Manage Pipelines
+      </a>
+    </div>
   </div>
   
   <div class="dashboard-sections">

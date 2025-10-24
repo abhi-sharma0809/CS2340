@@ -17,4 +17,13 @@ urlpatterns = [
     # API endpoints
     path("api/candidates/", views.search_candidates, name="search_candidates"),
     # Removed standalone map routes; map functionality lives on the Jobs list page
+    
+    # New recruiter functionality
+    path("<int:job_id>/pipeline/", views.pipeline_management, name="pipeline_management"),
+    path("api/move-application/<int:application_id>/", views.move_application_stage, name="move_application_stage"),
+    path("candidate-search/", views.candidate_search, name="candidate_search"),
+    path("saved-searches/", views.saved_searches, name="saved_searches"),
+    path("api/save-search/", views.save_search, name="save_search"),
+    path("saved-search/<int:search_id>/", views.run_saved_search, name="run_saved_search"),
+    path("search-notifications/", views.search_notifications, name="search_notifications"),
 ]
