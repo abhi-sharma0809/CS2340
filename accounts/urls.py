@@ -16,9 +16,6 @@ urlpatterns = [
     path("send-message/<int:recipient_id>/", views.send_message, name="send_message"),
     path("send-email/<int:recipient_id>/", views.send_email, name="send_email"),
     path("messages/", views.get_messages, name="get_messages"),
-    path("messages-page/", views.messages_page, name="messages_page"),
-    path("recruiter-messages/", views.recruiter_messages_page, name="recruiter_messages_page"),
-    path("send-reply/", views.send_reply, name="send_reply"),
     path("emails/", views.get_emails, name="get_emails"),
     path("mark-read/<int:message_id>/", views.mark_message_read, name="mark_message_read"),
 ]

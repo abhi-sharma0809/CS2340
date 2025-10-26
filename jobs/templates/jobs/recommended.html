@@ -1,86 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Recommended Jobs{% endblock %}
 {% block content %}
-<section class="container" style="padding: 60px 20px; max-width: 1000px; margin: 0 auto;">
-  
-  <!-- Page Header -->
-  <div style="text-align: center; margin-bottom: 50px;">
-    <h1 style="color: var(--gt-navy); font-size: 36px; margin-bottom: 12px;">Recommended Jobs</h1>
-    {% if skills %}
-      <p style="color: #6b7280; font-size: 16px;">
-        Based on your skills: <em style="color: var(--gt-gold); font-weight: 600;">{{ skills|join:", " }}</em>
-      </p>
-    {% endif %}
-  </div>
-
-  {% if skills and jobs %}
-    <!-- Job List -->
-    <div style="display: grid; gap: 16px;">
-      {% for j in jobs %}
-        <div style="background: #fff; border: 1px solid rgba(0,0,0,.06); border-radius: 12px; padding: 20px; transition: box-shadow 0.2s;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
-            <div style="flex: 1;">
-              <h3 style="margin: 0 0 8px; color: var(--gt-navy);">
-                <a href="{% url 'jobs:detail' j.pk %}" style="text-decoration: none; color: inherit;">
-                  {{ j.title }}
-                </a>
-              </h3>
-              {% if j.location %}
-                <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                  <i class="fas fa-map-marker-alt"></i> {{ j.location }}
-                </p>
-              {% endif %}
-            </div>
-            <a href="{% url 'jobs:detail' j.pk %}" class="cta" style="white-space: nowrap;">
-              View Details
-            </a>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-    
-  {% elif not skills %}
-    <!-- No Skills State -->
-    <div style="text-align: center; padding: 80px 20px;">
-      <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-radius: 16px; padding: 60px 40px; max-width: 600px; margin: 0 auto; border: 2px solid #bae6fd;">
-        <div style="font-size: 64px; margin-bottom: 24px;">💡</div>
-        <h2 style="color: var(--gt-navy); font-size: 28px; margin-bottom: 16px;">
-          Get Personalized Job Recommendations
-        </h2>
-        <p style="color: #374151; font-size: 18px; line-height: 1.6; margin-bottom: 32px;">
-          Add your skills to your profile and we'll match you with the best job opportunities tailored just for you!
-        </p>
-        <a href="{% url 'accounts:profile_edit' %}" class="cta" style="display: inline-block; font-size: 16px; padding: 14px 32px;">
-          <i class="fas fa-user-edit"></i> Add Skills to Profile
-        </a>
-        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
-          Our algorithm will analyze your skills and recommend jobs that match your expertise
-        </p>
-      </div>
-    </div>
-    
-  {% else %}
-    <!-- No Matches State -->
-    <div style="text-align: center; padding: 80px 20px;">
-      <div style="background: #fff; border: 1px solid rgba(0,0,0,.06); border-radius: 16px; padding: 60px 40px; max-width: 600px; margin: 0 auto;">
-        <div style="font-size: 64px; margin-bottom: 24px;">🔍</div>
-        <h2 style="color: var(--gt-navy); font-size: 28px; margin-bottom: 16px;">
-          No Recommendations Yet
-        </h2>
-        <p style="color: #374151; font-size: 18px; line-height: 1.6; margin-bottom: 32px;">
-          We couldn't find jobs matching your current skills. Try adding more skills to broaden your opportunities!
-        </p>
-        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-          <a href="{% url 'accounts:profile_edit' %}" class="cta" style="display: inline-block;">
-            <i class="fas fa-plus"></i> Add More Skills
-          </a>
-          <a href="{% url 'jobs:list' %}" class="cta" style="display: inline-block; background: #fff; color: var(--gt-navy); border: 2px solid var(--gt-navy);">
-            <i class="fas fa-search"></i> Browse All Jobs
-          </a>
-        </div>
-      </div>
-    </div>
-  {% endif %}
-  
-</section>
+<h1>Recommended Jobs</h1>
+{% if skills and jobs %}
+  <p>Based on your skills: <em>{{ skills|join:", " }}</em></p>
+  <ul>
+    {% for j in jobs %}
+      <li>
+        <a href="{% url 'jobs:detail' j.pk %}">{{ j.title }}</a>
+        {% if j.location %} — {{ j.location }}{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% elif not skills %}
+  <p>Add skills to your <a href="{% url 'accounts:profile_edit' %}">profile</a> to get recommendations.</p>
+{% else %}
+  <p>No recommendations yet. Try adding more skills.</p>
+{% endif %}
 {% endblock %}
