@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Search Notifications{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Search Notifications</h2>
+                <div>
+                    <a href="{% url 'jobs:saved_searches' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-bookmark"></i> Saved Searches
+                    </a>
+                    <a href="{% url 'jobs:candidate_search' %}" class="btn btn-primary">
+                        <i class="fas fa-search"></i> New Search
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if notifications %}
+                <div class="row">
+                    {% for notification in notifications %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h5 class="card-title mb-0">
+                                        {{ notification.candidate.get_full_name|default:notification.candidate.username }}
+                                    </h5>
+                                    <span class="badge bg-primary">{{ notification.saved_search.name }}</span>
+                                </div>
+                                
+                                <p class="text-muted small mb-2">{{ notification.candidate.email }}</p>
+                                
+                                {% if notification.candidate.profile.headline %}
+                                <p class="card-text text-muted small">{{ notification.candidate.profile.headline }}</p>
+                                {% endif %}
+                                
+                                {% if notification.candidate.profile.skills %}
+                                <div class="mb-3">
+                                    <h6 class="small text-muted mb-1">Skills:</h6>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for skill in notification.candidate.profile.skills|slice:":3" %}
+                                        <span class="badge bg-light text-dark">{{ skill }}</span>
+                                        {% endfor %}
+                                        {% if notification.candidate.profile.skills|length > 3 %}
+                                        <span class="badge bg-light text-muted">+{{ notification.candidate.profile.skills|length|add:"-3" }} more</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        Notified {{ notification.sent_at|timesince }} ago
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="card-footer bg-transparent">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'accounts:public_profile' notification.candidate.username %}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-user"></i> View Profile
+                                    </a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="{% url 'accounts:send_message' notification.candidate.id %}">
+                                                <i class="fas fa-envelope"></i> Send Message
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="{% url 'accounts:send_email' notification.candidate.id %}">
+                                                <i class="fas fa-paper-plane"></i> Send Email
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Notifications Yet</h4>
+                    <p class="text-muted">You'll receive notifications when new candidates match your saved searches</p>
+                    <a href="{% url 'jobs:saved_searches' %}" class="btn btn-primary">
+                        <i class="fas fa-bookmark"></i> Create Saved Search
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

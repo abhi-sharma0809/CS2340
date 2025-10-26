@@ -7,9 +7,12 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.conf import settings
-from .models import Job, JobApplication
+from .models import Job, JobApplication, PipelineStage, ApplicationPipeline, SavedSearch, SearchNotification
 from .forms import JobPostForm
 from accounts.models import Profile
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 def _skill_tokens(text: str):
     if not text:
@@ -310,3 +313,334 @@ def search_candidates(request):
             })
     
     return JsonResponse({'candidates': candidates[:10]})  # Limit to 10 results
+
+
+# Pipeline Management Views
+@login_required
+def pipeline_management(request, job_id):
+    """Kanban board view for managing job application pipeline"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    job = get_object_or_404(Job, pk=job_id)
+    applications = JobApplication.objects.filter(job=job).select_related('user', 'user__profile')
+    
+    # Get or create default pipeline stages
+    stages = PipelineStage.objects.filter(is_active=True).order_by('order')
+    if not stages.exists():
+        # Create default stages
+        default_stages = [
+            {'name': 'Applied', 'order': 1, 'color': '#6c757d'},
+            {'name': 'Screening', 'order': 2, 'color': '#ffc107'},
+            {'name': 'Interview', 'order': 3, 'color': '#17a2b8'},
+            {'name': 'Final Review', 'order': 4, 'color': '#28a745'},
+            {'name': 'Hired', 'order': 5, 'color': '#007bff'},
+        ]
+        for stage_data in default_stages:
+            PipelineStage.objects.get_or_create(
+                name=stage_data['name'],
+                defaults=stage_data
+            )
+        stages = PipelineStage.objects.filter(is_active=True).order_by('order')
+    
+    # Get applications with their pipeline positions
+    applications_with_stages = []
+    for app in applications:
+        try:
+            pipeline = app.pipeline
+            stage = pipeline.stage
+        except ApplicationPipeline.DoesNotExist:
+            # Assign to first stage if not in pipeline
+            stage = stages.first()
+            if stage:
+                ApplicationPipeline.objects.create(application=app, stage=stage)
+        
+        applications_with_stages.append({
+            'application': app,
+            'stage': stage,
+            'pipeline': getattr(app, 'pipeline', None)
+        })
+    
+    return render(request, 'jobs/pipeline_management.html', {
+        'job': job,
+        'stages': stages,
+        'applications_with_stages': applications_with_stages
+    })
+
+
+@login_required
+@require_POST
+def move_application_stage(request, application_id):
+    """Move an application to a different pipeline stage"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'Profile not found'}, status=404)
+    
+    application = get_object_or_404(JobApplication, pk=application_id)
+    stage_id = request.POST.get('stage_id')
+    notes = request.POST.get('notes', '')
+    
+    if not stage_id:
+        return JsonResponse({'error': 'Stage ID required'}, status=400)
+    
+    try:
+        stage = PipelineStage.objects.get(pk=stage_id, is_active=True)
+    except PipelineStage.DoesNotExist:
+        return JsonResponse({'error': 'Invalid stage'}, status=400)
+    
+    # Update or create pipeline entry
+    pipeline, created = ApplicationPipeline.objects.get_or_create(
+        application=application,
+        defaults={'stage': stage, 'notes': notes}
+    )
+    
+    if not created:
+        pipeline.stage = stage
+        pipeline.notes = notes
+        pipeline.save()
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'Application moved to {stage.name}',
+        'stage_name': stage.name,
+        'stage_color': stage.color
+    })
+
+
+# Candidate Search Views
+@login_required
+def candidate_search(request):
+    """Advanced candidate search interface for recruiters"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    # Get search parameters
+    skills = request.GET.get('skills', '').strip()
+    location = request.GET.get('location', '').strip()
+    radius = request.GET.get('radius', '50')
+    education = request.GET.get('education', '').strip()
+    experience = request.GET.get('experience', '').strip()
+    
+    candidates = []
+    
+    if any([skills, location, education, experience]):
+        # Get job seekers
+        job_seekers = User.objects.filter(
+            profile__user_type='job_seeker',
+            profile__is_public=True
+        ).select_related('profile')
+        
+        for user in job_seekers:
+            try:
+                profile = user.profile
+            except Profile.DoesNotExist:
+                continue
+            match_score = 0
+            match_reasons = []
+            
+            # Skills matching
+            if skills:
+                try:
+                    user_skills = _skill_tokens(profile.skills or '')
+                    search_skills = _skill_tokens(skills)
+                    skill_matches = len(set(user_skills) & set(search_skills))
+                    if skill_matches > 0:
+                        match_score += skill_matches * 10
+                        match_reasons.append(f"Skills: {skill_matches} matches")
+                except Exception as e:
+                    # Skip this candidate if there's an error with skills processing
+                    continue
+            
+            # Education matching
+            if education and profile.education:
+                try:
+                    education_lower = profile.education.lower()
+                    education_keywords = education.lower().split()
+                    education_matches = sum(1 for keyword in education_keywords if keyword in education_lower)
+                    if education_matches > 0:
+                        match_score += education_matches * 5
+                        match_reasons.append(f"Education: {education_matches} matches")
+                except Exception:
+                    pass
+            
+            # Experience matching
+            if experience and profile.experience:
+                try:
+                    experience_lower = profile.experience.lower()
+                    experience_keywords = experience.lower().split()
+                    experience_matches = sum(1 for keyword in experience_keywords if keyword in experience_lower)
+                    if experience_matches > 0:
+                        match_score += experience_matches * 5
+                        match_reasons.append(f"Experience: {experience_matches} matches")
+                except Exception:
+                    pass
+            
+            # Location matching (simplified - would need geocoding in production)
+            if location and profile.commute_radius_km:
+                try:
+                    # This is a simplified location match - in production you'd use coordinates
+                    if location.lower() in (profile.user.email.split('@')[1] if '@' in profile.user.email else ''):
+                        match_score += 3
+                        match_reasons.append("Location match")
+                except Exception:
+                    pass
+            
+            if match_score > 0:
+                candidates.append({
+                    'user': user,
+                    'profile': profile,
+                    'match_score': match_score,
+                    'match_reasons': match_reasons
+                })
+        
+        # Sort by match score
+        candidates.sort(key=lambda x: x['match_score'], reverse=True)
+    
+    return render(request, 'jobs/candidate_search.html', {
+        'candidates': candidates,
+        'search_params': {
+            'skills': skills,
+            'location': location,
+            'radius': radius,
+            'education': education,
+            'experience': experience
+        }
+    })
+
+
+@login_required
+def saved_searches(request):
+    """Manage saved candidate searches"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    searches = SavedSearch.objects.filter(recruiter=request.user).order_by('-created_at')
+    
+    return render(request, 'jobs/saved_searches.html', {
+        'searches': searches
+    })
+
+
+@login_required
+@require_POST
+def save_search(request):
+    """Save a candidate search for future use"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'Profile not found'}, status=404)
+    
+    name = request.POST.get('name', '').strip()
+    description = request.POST.get('description', '').strip()
+    skills = request.POST.get('skills', '').strip()
+    location = request.POST.get('location', '').strip()
+    radius = request.POST.get('radius', '50')
+    education = request.POST.get('education', '').strip()
+    experience = request.POST.get('experience', '').strip()
+    notify = request.POST.get('notify') == 'on'
+    
+    if not name:
+        return JsonResponse({'error': 'Search name is required'}, status=400)
+    
+    # Create saved search
+    saved_search = SavedSearch.objects.create(
+        recruiter=request.user,
+        name=name,
+        description=description,
+        skills=skills,
+        location=location,
+        location_radius=int(radius) if radius.isdigit() else 50,
+        education_keywords=education,
+        experience_keywords=experience,
+        notify_on_new_matches=notify
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Search saved successfully',
+        'search_id': saved_search.id
+    })
+
+
+@login_required
+def run_saved_search(request, search_id):
+    """Run a saved search and show results"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    saved_search = get_object_or_404(SavedSearch, pk=search_id, recruiter=request.user)
+    
+    # Build search parameters
+    search_params = {
+        'skills': saved_search.skills,
+        'location': saved_search.location,
+        'radius': str(saved_search.location_radius),
+        'education': saved_search.education_keywords,
+        'experience': saved_search.experience_keywords
+    }
+    
+    # Redirect to candidate search with parameters
+    from django.http import HttpResponseRedirect
+    from django.urls import reverse
+    from urllib.parse import urlencode
+    
+    url = reverse('jobs:candidate_search') + '?' + urlencode({k: v for k, v in search_params.items() if v})
+    return HttpResponseRedirect(url)
+
+
+@login_required
+def search_notifications(request):
+    """View saved search notifications for recruiters"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+    
+    # Get notifications for this recruiter's saved searches
+    notifications = SearchNotification.objects.filter(
+        saved_search__recruiter=request.user
+    ).select_related('candidate', 'candidate__profile', 'saved_search').order_by('-sent_at')
+    
+    return render(request, 'jobs/search_notifications.html', {
+        'notifications': notifications
+    })
