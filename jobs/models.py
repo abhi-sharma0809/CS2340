@@ -52,6 +52,23 @@ class JobApplication(models.Model):
         return f"{self.user.username} applied to {self.job.title}"
 
 
+class ApplicationStatusHistory(models.Model):
+    """Track status changes for job applications"""
+    application = models.ForeignKey(JobApplication, on_delete=models.CASCADE, related_name='status_history')
+    old_status = models.CharField(max_length=20, blank=True)
+    new_status = models.CharField(max_length=20)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='status_changes_made')
+    changed_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-changed_at']
+        verbose_name_plural = 'Application status histories'
+    
+    def __str__(self):
+        return f"{self.application.user.username} - {self.old_status} → {self.new_status}"
+
+
 # Pipeline Management Models
 class PipelineStage(models.Model):
     """Customizable pipeline stages for managing job applications"""

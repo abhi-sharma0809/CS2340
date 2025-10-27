@@ -3,144 +3,626 @@
 
 {% block title %}My Job Applications{% endblock %}
 
+{% block extra_head %}
+<style>
+  :root {
+    --gt-navy: #003057;
+    --gt-gold: #B3A369;
+    --text: #111827;
+    --muted: #6b7280;
+  }
+  
+  .applications-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+  
+  .page-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  
+  .page-header h1 {
+    color: var(--gt-navy);
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+  
+  .page-header p {
+    color: var(--muted);
+    font-size: 16px;
+  }
+  
+  /* Statistics Section */
+  .stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  
+  .stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .stat-card.total { border-left-color: #6366f1; }
+  .stat-card.applied { border-left-color: #3b82f6; }
+  .stat-card.reviewed { border-left-color: #f59e0b; }
+  .stat-card.interview { border-left-color: #10b981; }
+  .stat-card.accepted { border-left-color: #059669; }
+  .stat-card.rejected { border-left-color: #ef4444; }
+  
+  .stat-number {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  
+  .stat-card.total .stat-number { color: #6366f1; }
+  .stat-card.applied .stat-number { color: #3b82f6; }
+  .stat-card.reviewed .stat-number { color: #f59e0b; }
+  .stat-card.interview .stat-number { color: #10b981; }
+  .stat-card.accepted .stat-number { color: #059669; }
+  .stat-card.rejected .stat-number { color: #ef4444; }
+  
+  .stat-label {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  /* Application Cards */
+  .applications-grid {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  
+  .application-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s, transform 0.2s;
+    position: relative;
+  }
+  
+  .application-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+  
+  .application-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    gap: 16px;
+  }
+  
+  .application-title {
+    flex: 1;
+  }
+  
+  .application-title h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gt-navy);
+    margin: 0 0 8px 0;
+  }
+  
+  .application-title h3 a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  
+  .application-title h3 a:hover {
+    color: var(--gt-gold);
+  }
+  
+  .company-name {
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 500;
+  }
+  
+  .status-indicator {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  
+  .status-applied {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .status-reviewed {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .status-interview {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  .status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .status-accepted {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .application-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 16px 0;
+    padding: 16px 0;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  
+  .detail-item i {
+    color: var(--gt-gold);
+    width: 16px;
+  }
+  
+  .application-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  
+  .app-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .app-badge.remote {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  .app-badge.visa {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .application-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .applied-date {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  
+  .view-job-btn {
+    padding: 10px 20px;
+    background: var(--gt-gold);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+  }
+  
+  .view-job-btn:hover {
+    background: #9a8a54;
+    color: white;
+  }
+  
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+  }
+  
+  .empty-state-icon {
+    font-size: 64px;
+    color: var(--gt-gold);
+    margin-bottom: 24px;
+  }
+  
+  .empty-state h2 {
+    color: var(--gt-navy);
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  
+  .empty-state p {
+    color: var(--muted);
+    font-size: 16px;
+    margin-bottom: 32px;
+  }
+  
+  .search-jobs-btn {
+    padding: 14px 32px;
+    background: var(--gt-gold);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    transition: background-color 0.2s;
+  }
+  
+  .search-jobs-btn:hover {
+    background: #9a8a54;
+    color: white;
+  }
+  
+  /* Status Update Notification */
+  .status-notification {
+    background: #dbeafe;
+    border-left: 4px solid #3b82f6;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .status-notification i {
+    color: #3b82f6;
+    font-size: 18px;
+  }
+  
+  .status-notification-text {
+    flex: 1;
+    color: #1e40af;
+    font-size: 14px;
+  }
+  
+  /* Status Timeline */
+  .status-timeline-toggle {
+    padding: 8px 16px;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    transition: background-color 0.2s;
+  }
+  
+  .status-timeline-toggle:hover {
+    background: #e5e7eb;
+  }
+  
+  .status-timeline {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    display: none;
+  }
+  
+  .status-timeline.show {
+    display: block;
+  }
+  
+  .timeline-header {
+    font-weight: 600;
+    color: var(--gt-navy);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  
+  .timeline-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 30px;
+    bottom: -16px;
+    width: 2px;
+    background: #d1d5db;
+  }
+  
+  .timeline-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  
+  .timeline-dot.dot-applied { border-color: #3b82f6; color: #3b82f6; }
+  .timeline-dot.dot-reviewed { border-color: #f59e0b; color: #f59e0b; }
+  .timeline-dot.dot-interview { border-color: #10b981; color: #10b981; }
+  .timeline-dot.dot-accepted { border-color: #059669; color: #059669; }
+  .timeline-dot.dot-rejected { border-color: #ef4444; color: #ef4444; }
+  
+  .timeline-content {
+    flex: 1;
+    padding-top: 4px;
+  }
+  
+  .timeline-status {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  
+  .timeline-date {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  
+  @media (max-width: 768px) {
+    .application-header {
+      flex-direction: column;
+    }
+    
+    .stats-container {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .application-footer {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>My Job Applications</h2>
-        <a href="{% url 'jobs:list' %}" class="btn btn-primary">
-            <i class="fas fa-search"></i> Search More Jobs
-        </a>
+<div class="applications-container">
+  <div class="page-header">
+    <h1>My Job Applications</h1>
+    <p>Track the status of your applications and stay updated on opportunities</p>
+  </div>
+  
+  {% if applications %}
+    <!-- Application Statistics -->
+    <div class="stats-container">
+      <div class="stat-card total">
+        <div class="stat-number">{{ applications|length }}</div>
+        <div class="stat-label">Total Applications</div>
+      </div>
+      <div class="stat-card applied">
+        <div class="stat-number">{{ stats.applied }}</div>
+        <div class="stat-label">Applied</div>
+      </div>
+      <div class="stat-card reviewed">
+        <div class="stat-number">{{ stats.reviewed }}</div>
+        <div class="stat-label">Under Review</div>
+      </div>
+      <div class="stat-card interview">
+        <div class="stat-number">{{ stats.interview }}</div>
+        <div class="stat-label">Interviews</div>
+      </div>
+      <div class="stat-card accepted">
+        <div class="stat-number">{{ stats.accepted }}</div>
+        <div class="stat-label">Accepted</div>
+      </div>
+      <div class="stat-card rejected">
+        <div class="stat-number">{{ stats.rejected }}</div>
+        <div class="stat-label">Rejected</div>
+      </div>
     </div>
     
-    {% if applications %}
-        <div class="row">
-            {% for application in applications %}
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title">{{ application.job.title }}</h5>
-                                <span class="badge 
-                                    {% if application.status == 'applied' %}bg-primary
-                                    {% elif application.status == 'reviewed' %}bg-info
-                                    {% elif application.status == 'interview' %}bg-warning
-                                    {% elif application.status == 'accepted' %}bg-success
-                                    {% elif application.status == 'rejected' %}bg-danger
-                                    {% endif %}">
-                                    {{ application.get_status_display }}
-                                </span>
-                            </div>
-                            
-                            <h6 class="card-subtitle mb-2 text-muted">
-                                {{ application.job.company_name|default:"Company" }}
-                            </h6>
-                            
-                            <p class="card-text">
-                                <i class="fas fa-map-marker-alt"></i> 
-                                {{ application.job.location|default:"Location not specified" }}
-                            </p>
-                            
-                            {% if application.job.salary_min or application.job.salary_max %}
-                            <p class="card-text">
-                                <i class="fas fa-dollar-sign"></i> 
-                                {% if application.job.salary_min and application.job.salary_max %}
-                                    ${{ application.job.salary_min|floatformat:0 }} - ${{ application.job.salary_max|floatformat:0 }}
-                                {% elif application.job.salary_min %}
-                                    ${{ application.job.salary_min|floatformat:0 }}+
-                                {% elif application.job.salary_max %}
-                                    Up to ${{ application.job.salary_max|floatformat:0 }}
-                                {% endif %}
-                            </p>
-                            {% endif %}
-                            
-                            <div class="mb-2">
-                                {% if application.job.is_remote %}
-                                    <span class="badge bg-success">Remote</span>
-                                {% endif %}
-                                {% if application.job.visa_sponsorship %}
-                                    <span class="badge bg-warning">Visa Sponsorship</span>
-                                {% endif %}
-                            </div>
-                            
-                            <p class="card-text">
-                                <small class="text-muted">
-                                    <i class="fas fa-calendar"></i> Applied on {{ application.applied_at|date:"F d, Y" }}
-                                </small>
-                            </p>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <a href="{% url 'jobs:detail' application.job.pk %}" class="btn btn-outline-primary">
-                                    View Job Details
-                                </a>
-                                <small class="text-muted">
-                                    {{ application.applied_at|timesince }} ago
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-        
-        <!-- Application Statistics -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Application Statistics</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-md-2">
-                                <div class="border rounded p-3">
-                                    <h4 class="text-primary">{{ applications|length }}</h4>
-                                    <small class="text-muted">Total Applications</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="border rounded p-3">
-                                    <h4 class="text-info">{{ applications|length }}</h4>
-                                    <small class="text-muted">Applied</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="border rounded p-3">
-                                    <h4 class="text-warning">0</h4>
-                                    <small class="text-muted">Under Review</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="border rounded p-3">
-                                    <h4 class="text-success">0</h4>
-                                    <small class="text-muted">Interviews</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="border rounded p-3">
-                                    <h4 class="text-success">0</h4>
-                                    <small class="text-muted">Accepted</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="border rounded p-3">
-                                    <h4 class="text-danger">0</h4>
-                                    <small class="text-muted">Rejected</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Applications List -->
+    <div class="applications-grid">
+      {% for application in applications %}
+        <div class="application-card">
+          <div class="application-header">
+            <div class="application-title">
+              <h3>
+                <a href="{% url 'jobs:detail' application.job.pk %}">
+                  {{ application.job.title }}
+                </a>
+              </h3>
+              <div class="company-name">{{ application.job.company_name|default:"Company" }}</div>
             </div>
-        </div>
-        
-    {% else %}
-        <div class="alert alert-info text-center">
-            <h4>No Applications Yet</h4>
-            <p>You haven't applied to any jobs yet. Start your job search today!</p>
-            <a href="{% url 'jobs:list' %}" class="btn btn-primary">
-                <i class="fas fa-search"></i> Search Jobs
+            <div class="status-indicator status-{{ application.status }}">
+              {{ application.get_status_display }}
+            </div>
+          </div>
+          
+          <div class="application-details">
+            {% if application.job.location %}
+              <div class="detail-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ application.job.location }}</span>
+              </div>
+            {% endif %}
+            
+            {% if application.job.salary_min or application.job.salary_max %}
+              <div class="detail-item">
+                <i class="fas fa-dollar-sign"></i>
+                <span>
+                  {% if application.job.salary_min and application.job.salary_max %}
+                    ${{ application.job.salary_min|floatformat:0 }} - ${{ application.job.salary_max|floatformat:0 }}
+                  {% elif application.job.salary_min %}
+                    ${{ application.job.salary_min|floatformat:0 }}+
+                  {% elif application.job.salary_max %}
+                    Up to ${{ application.job.salary_max|floatformat:0 }}
+                  {% endif %}
+                </span>
+              </div>
+            {% endif %}
+            
+            <div class="detail-item">
+              <i class="fas fa-calendar"></i>
+              <span>Applied {{ application.applied_at|date:"M d, Y" }}</span>
+            </div>
+          </div>
+          
+          {% if application.job.is_remote or application.job.visa_sponsorship %}
+            <div class="application-badges">
+              {% if application.job.is_remote %}
+                <span class="app-badge remote">
+                  <i class="fas fa-home"></i> Remote
+                </span>
+              {% endif %}
+              {% if application.job.visa_sponsorship %}
+                <span class="app-badge visa">
+                  <i class="fas fa-passport"></i> Visa Sponsorship
+                </span>
+              {% endif %}
+            </div>
+          {% endif %}
+          
+          {% if application.status in 'interview,accepted' %}
+            <div class="status-notification">
+              <i class="fas fa-info-circle"></i>
+              <div class="status-notification-text">
+                {% if application.status == 'interview' %}
+                  <strong>Interview Scheduled!</strong> Check your messages for details.
+                {% elif application.status == 'accepted' %}
+                  <strong>Congratulations!</strong> You've been accepted for this position. Check your messages for next steps.
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+          
+          {% if application.status_history.exists %}
+            <button class="status-timeline-toggle" onclick="toggleTimeline({{ application.id }})">
+              <i class="fas fa-history"></i>
+              <span>View Status History</span>
+            </button>
+            
+            <div id="timeline-{{ application.id }}" class="status-timeline">
+              <div class="timeline-header">
+                <i class="fas fa-clock"></i>
+                Application Timeline
+              </div>
+              {% for history in application.status_history.all %}
+                <div class="timeline-item">
+                  <div class="timeline-dot dot-{{ history.new_status }}">
+                    {% if history.new_status == 'applied' %}<i class="fas fa-file-alt"></i>
+                    {% elif history.new_status == 'reviewed' %}<i class="fas fa-eye"></i>
+                    {% elif history.new_status == 'interview' %}<i class="fas fa-calendar-check"></i>
+                    {% elif history.new_status == 'accepted' %}<i class="fas fa-check"></i>
+                    {% elif history.new_status == 'rejected' %}<i class="fas fa-times"></i>
+                    {% endif %}
+                  </div>
+                  <div class="timeline-content">
+                    <div class="timeline-status">
+                      {% if history.old_status %}
+                        Changed from <strong>{{ history.get_old_status_display }}</strong> to <strong>{{ history.get_new_status_display }}</strong>
+                      {% else %}
+                        Status: <strong>{{ history.get_new_status_display }}</strong>
+                      {% endif %}
+                    </div>
+                    <div class="timeline-date">
+                      {{ history.changed_at|date:"M d, Y \a\t h:i A" }}
+                      {% if history.changed_by %}by {{ history.changed_by.get_full_name|default:history.changed_by.username }}{% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+          
+          <div class="application-footer">
+            <div class="applied-date">
+              <i class="fas fa-clock"></i> {{ application.applied_at|timesince }} ago
+            </div>
+            <a href="{% url 'jobs:detail' application.job.pk %}" class="view-job-btn">
+              <i class="fas fa-briefcase"></i> View Job Details
             </a>
+          </div>
         </div>
-    {% endif %}
+      {% endfor %}
+    </div>
+    
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <i class="fas fa-search"></i>
+      </div>
+      <h2>No Applications Yet</h2>
+      <p>You haven't applied to any jobs yet. Start your job search today and find your next opportunity!</p>
+      <a href="{% url 'jobs:list' %}" class="search-jobs-btn">
+        <i class="fas fa-search"></i> Search Jobs
+      </a>
+    </div>
+  {% endif %}
 </div>
+
+<script>
+function toggleTimeline(applicationId) {
+  const timeline = document.getElementById('timeline-' + applicationId);
+  const button = event.currentTarget;
+  const span = button.querySelector('span');
+  
+  if (timeline.classList.contains('show')) {
+    timeline.classList.remove('show');
+    span.textContent = 'View Status History';
+  } else {
+    timeline.classList.add('show');
+    span.textContent = 'Hide Status History';
+  }
+}
+</script>
 {% endblock %}

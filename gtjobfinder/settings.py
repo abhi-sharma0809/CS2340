@@ -65,6 +65,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "accounts.context_processors.unread_messages_count",
             ],
         },
     },
@@ -134,15 +135,14 @@ LOGOUT_REDIRECT_URL = "core:home"
 GOOGLE_MAPS_API_KEY = "AIzaSyBVpc_Kw9tRNbxGyxWmKM3iSx2hn7JPrM4"
 
 # Email Configuration
-# Using Mailtrap for testing (free, super easy, catches all emails for testing!)
-# Sign up at https://mailtrap.io/ to get your credentials (takes 30 seconds)
+# Using Gmail SMTP
 EMAIL_BACKEND = 'gtjobfinder.email_backend.CustomEmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@gtjobfinder.com'
-EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
-EMAIL_PORT = 2525
+DEFAULT_FROM_EMAIL = 'jobfindercs@gmail.com'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'abd587700953a9'  # Get from mailtrap.io -> Email Testing -> SMTP Settings
-EMAIL_HOST_PASSWORD = '4f80924c5ea6f3'  # Get from mailtrap.io -> Email Testing -> SMTP Settings
+EMAIL_HOST_USER = 'jobfindercs@gmail.com'
+EMAIL_HOST_PASSWORD = 'vnwmctlxjmebagih'
 
 # For testing only: Use console backend
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

@@ -175,9 +175,20 @@ def apply_job(request, pk):
 
 @login_required
 def my_applications(request):
-    applications = JobApplication.objects.filter(user=request.user).select_related('job')
+    applications = JobApplication.objects.filter(user=request.user).select_related('job').prefetch_related('status_history').order_by('-applied_at')
+    
+    # Calculate statistics
+    stats = {
+        'applied': applications.filter(status='applied').count(),
+        'reviewed': applications.filter(status='reviewed').count(),
+        'interview': applications.filter(status='interview').count(),
+        'accepted': applications.filter(status='accepted').count(),
+        'rejected': applications.filter(status='rejected').count(),
+    }
+    
     return render(request, "jobs/my_applications.html", {
-        "applications": applications
+        "applications": applications,
+        "stats": stats,
     })
 
 # Removed standalone map views; the Jobs list page includes an embedded map
@@ -279,6 +290,82 @@ def job_applicants(request, pk):
         'job': job,
         'applications': applications
     })
+
+
+@login_required
+@require_POST
+def update_application_status(request, application_id):
+    """Update application status and send message to candidate"""
+    try:
+        import json
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        
+        # Get the application
+        application = get_object_or_404(JobApplication, id=application_id)
+        
+        # Check if user is authorized (recruiter or job owner)
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        
+        # Store old status for comparison
+        old_status = application.status
+        
+        # Only proceed if status actually changed
+        if old_status != new_status:
+            # Update status
+            application.status = new_status
+            application.save()
+            
+            # Create status history record
+            from jobs.models import ApplicationStatusHistory
+            ApplicationStatusHistory.objects.create(
+                application=application,
+                old_status=old_status,
+                new_status=new_status,
+                changed_by=request.user
+            )
+            
+            # Send message to candidate about status change
+            from accounts.models import Message
+            
+            status_messages = {
+                'applied': 'Your application has been received and is being reviewed.',
+                'reviewed': 'Great news! Your application is under review by our team.',
+                'interview': '🎉 Congratulations! We would like to schedule an interview with you for the {job_title} position.',
+                'accepted': '🎊 Congratulations! We are pleased to offer you the {job_title} position!',
+                'rejected': 'Thank you for your interest in the {job_title} position. After careful consideration, we have decided to move forward with other candidates.',
+            }
+            
+            subject = f'Update on your application for {application.job.title}'
+            body = status_messages.get(new_status, 'Your application status has been updated.').format(
+                job_title=application.job.title
+            )
+            
+            # Add additional context
+            body += f'\n\nStatus: {application.get_status_display()}'
+            body += f'\nCompany: {application.job.company_name or "Our Company"}'
+            body += f'\n\nIf you have any questions, please reply to this message.'
+            
+            # Create the message
+            Message.objects.create(
+                sender=request.user,
+                recipient=application.user,
+                subject=subject,
+                body=body,
+                job_application=application
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Status updated to {application.get_status_display()} and notification sent to candidate',
+            'new_status': new_status,
+            'new_status_display': application.get_status_display()
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def search_candidates(request):
     """API endpoint to search for candidates (job seekers)"""
@@ -405,16 +492,91 @@ def move_application_stage(request, application_id):
         defaults={'stage': stage, 'notes': notes}
     )
     
+    old_stage = None
     if not created:
+        old_stage = pipeline.stage
         pipeline.stage = stage
         pipeline.notes = notes
         pipeline.save()
     
+    # Map pipeline stage names to application statuses (case-insensitive)
+    stage_name_lower = stage.name.lower()
+    
+    # Determine new status based on stage name keywords
+    if 'applied' in stage_name_lower or 'new' in stage_name_lower:
+        new_status = 'applied'
+    elif 'screen' in stage_name_lower or 'review' in stage_name_lower:
+        new_status = 'reviewed'
+    elif 'interview' in stage_name_lower:
+        new_status = 'interview'
+    elif 'hired' in stage_name_lower or 'accept' in stage_name_lower or 'offer' in stage_name_lower:
+        new_status = 'accepted'
+    elif 'reject' in stage_name_lower or 'declined' in stage_name_lower:
+        new_status = 'rejected'
+    else:
+        # Default mapping for exact matches
+        stage_to_status_map = {
+            'Applied': 'applied',
+            'Screening': 'reviewed',
+            'Interview': 'interview',
+            'Final Review': 'reviewed',
+            'Hired': 'accepted',
+            'Rejected': 'rejected',
+        }
+        new_status = stage_to_status_map.get(stage.name, None)
+    old_status = application.status
+    
+    if new_status and new_status != old_status:
+        application.status = new_status
+        application.save()
+        
+        # Create status history record
+        from jobs.models import ApplicationStatusHistory
+        ApplicationStatusHistory.objects.create(
+            application=application,
+            old_status=old_status,
+            new_status=new_status,
+            changed_by=request.user
+        )
+        
+        # Send message to candidate about status change
+        from accounts.models import Message
+        
+        status_messages = {
+            'applied': 'Your application has been received and is being reviewed.',
+            'reviewed': 'Great news! Your application is under review by our team.',
+            'interview': '🎉 Congratulations! We would like to schedule an interview with you for the {job_title} position. Please check your email or reply to this message to coordinate scheduling.',
+            'accepted': '🎊 Congratulations! We are pleased to offer you the {job_title} position! We will be in touch with next steps.',
+            'rejected': 'Thank you for your interest in the {job_title} position. After careful consideration, we have decided to move forward with other candidates. We appreciate the time you invested in the application process.',
+        }
+        
+        subject = f'Update on your application for {application.job.title}'
+        body = status_messages.get(new_status, 'Your application status has been updated.').format(
+            job_title=application.job.title
+        )
+        
+        # Add additional context
+        body += f'\n\nStatus: {application.get_status_display()}'
+        body += f'\nCompany: {application.job.company_name or "Our Company"}'
+        if notes:
+            body += f'\n\nAdditional Notes: {notes}'
+        body += f'\n\nIf you have any questions, please reply to this message.'
+        
+        # Create the message
+        Message.objects.create(
+            sender=request.user,
+            recipient=application.user,
+            subject=subject,
+            body=body,
+            job_application=application
+        )
+    
     return JsonResponse({
         'success': True,
-        'message': f'Application moved to {stage.name}',
+        'message': f'Application moved to {stage.name}' + (f' and status updated to {application.get_status_display()}' if new_status and new_status != old_status else ''),
         'stage_name': stage.name,
-        'stage_color': stage.color
+        'stage_color': stage.color,
+        'status_updated': new_status is not None and new_status != old_status
     })
 
 

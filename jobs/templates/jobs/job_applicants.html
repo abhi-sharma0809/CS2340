@@ -231,6 +231,27 @@
     color: #166534;
   }
   
+  .status-dropdown {
+    padding: 6px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  
+  .status-dropdown:hover {
+    border-color: var(--gt-gold);
+  }
+  
+  .status-dropdown:focus {
+    outline: none;
+    border-color: var(--gt-gold);
+    box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.1);
+  }
+  
   .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -489,8 +510,16 @@
         {% endif %}
         
         <div class="application-meta">
-          <div>
+          <div style="display: flex; align-items: center; gap: 12px;">
             <span class="status-badge status-{{ application.status }}">{{ application.get_status_display }}</span>
+            <select class="status-dropdown" data-application-id="{{ application.id }}" onchange="updateApplicationStatus({{ application.id }}, this.value)">
+              <option value="">Change Status...</option>
+              <option value="applied" {% if application.status == 'applied' %}selected{% endif %}>Applied</option>
+              <option value="reviewed" {% if application.status == 'reviewed' %}selected{% endif %}>Under Review</option>
+              <option value="interview" {% if application.status == 'interview' %}selected{% endif %}>Interview Scheduled</option>
+              <option value="accepted" {% if application.status == 'accepted' %}selected{% endif %}>Accepted</option>
+              <option value="rejected" {% if application.status == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
           </div>
           <div>
             <i class="fas fa-calendar"></i>
@@ -661,6 +690,53 @@ function sendEmailToCandidate(recipientId, recipientEmail, recipientName, jobApp
   document.getElementById('emailSubject').value = `Regarding your application for {{ job.title }}`;
   document.getElementById('emailBody').value = `Dear ${recipientName},\n\nThank you for your interest in the {{ job.title }} position.\n\n`;
   openModal('sendEmailModal');
+}
+
+// Function to update application status
+async function updateApplicationStatus(applicationId, newStatus) {
+  if (!newStatus) {
+    return; // User selected "Change Status..." placeholder
+  }
+  
+  // Confirm status change
+  const confirmMsg = `Are you sure you want to change the application status to "${newStatus.replace('_', ' ')}"? The candidate will be notified via message.`;
+  if (!confirm(confirmMsg)) {
+    // Reset dropdown to current value
+    const dropdown = document.querySelector(`select[data-application-id="${applicationId}"]`);
+    const currentBadge = dropdown.closest('.application-meta').querySelector('.status-badge');
+    const currentStatus = currentBadge.className.split('status-')[1];
+    dropdown.value = currentStatus;
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/jobs/api/update-application-status/${applicationId}/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Update the status badge
+      const dropdown = document.querySelector(`select[data-application-id="${applicationId}"]`);
+      const badge = dropdown.closest('.application-meta').querySelector('.status-badge');
+      badge.className = `status-badge status-${newStatus}`;
+      badge.textContent = data.new_status_display;
+      
+      // Show success message
+      alert(data.message);
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Error updating status:', error);
+    alert('Failed to update application status. Please try again.');
+  }
 }
 </script>
 {% endblock %}

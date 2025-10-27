@@ -560,19 +560,17 @@
         View Analytics
       </a>
     </div>
-<<<<<<< HEAD
-=======
     
     <div class="action-card">
       <div class="action-icon">
         <i class="fas fa-comments"></i>
       </div>
       <div class="action-title">Messages</div>
-      <div class="action-description">Send messages to candidates through the platform</div>
-      <button onclick="openMessagesModal()" class="action-button">
+      <div class="action-description">View and manage messages with candidates</div>
+      <a href="{% url 'accounts:recruiter_messages_page' %}" class="action-button">
         <i class="fas fa-comment"></i>
         View Messages
-      </button>
+      </a>
     </div>
     
     <div class="action-card">
@@ -581,10 +579,10 @@
       </div>
       <div class="action-title">Email Center</div>
       <div class="action-description">Send emails to candidates through the platform</div>
-      <button onclick="openEmailsModal()" class="action-button">
+      <a href="#" class="action-button" onclick="alert('Use the Email button on job applicants pages to send emails'); return false;">
         <i class="fas fa-mail-bulk"></i>
         View Emails
-      </button>
+      </a>
     </div>
     
     <div class="action-card">
@@ -622,7 +620,6 @@
         Manage Pipelines
       </a>
     </div>
->>>>>>> eea9b1519c0787921bddd96201a4d7a3a864ad97
   </div>
   
   <div class="dashboard-sections">

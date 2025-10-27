@@ -14,6 +14,7 @@ urlpatterns = [
     path("<int:pk>/edit/", views.edit_job, name="edit"),
     path("my-jobs/", views.my_jobs, name="my_jobs"),
     path("<int:pk>/applicants/", views.job_applicants, name="applicants"),
+    path("api/update-application-status/<int:application_id>/", views.update_application_status, name="update_application_status"),
     # API endpoints
     path("api/candidates/", views.search_candidates, name="search_candidates"),
     # Removed standalone map routes; map functionality lives on the Jobs list page
