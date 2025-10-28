@@ -15,6 +15,70 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
+def _get_coordinates_from_location(location_text):
+    """
+    Get approximate coordinates for a location.
+    This is a simplified version - in production, you'd use a geocoding API.
+    Returns (latitude, longitude) tuple or (None, None) if not found.
+    """
+    # Common US cities coordinates (add more as needed)
+    city_coordinates = {
+        'atlanta': (33.7490, -84.3880),
+        'atlanta, ga': (33.7490, -84.3880),
+        'new york': (40.7128, -74.0060),
+        'new york, ny': (40.7128, -74.0060),
+        'los angeles': (34.0522, -118.2437),
+        'los angeles, ca': (34.0522, -118.2437),
+        'chicago': (41.8781, -87.6298),
+        'chicago, il': (41.8781, -87.6298),
+        'san francisco': (37.7749, -122.4194),
+        'san francisco, ca': (37.7749, -122.4194),
+        'boston': (42.3601, -71.0589),
+        'boston, ma': (42.3601, -71.0589),
+        'seattle': (47.6062, -122.3321),
+        'seattle, wa': (47.6062, -122.3321),
+        'austin': (30.2672, -97.7431),
+        'austin, tx': (30.2672, -97.7431),
+        'denver': (39.7392, -104.9903),
+        'denver, co': (39.7392, -104.9903),
+        'miami': (25.7617, -80.1918),
+        'miami, fl': (25.7617, -80.1918),
+    }
+    
+    location_lower = location_text.lower().strip()
+    return city_coordinates.get(location_lower, (None, None))
+
+
+def _calculate_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate the distance between two points on Earth using the Haversine formula.
+    Returns distance in kilometers.
+    """
+    if None in (lat1, lon1, lat2, lon2):
+        return None
+    
+    # Radius of Earth in kilometers
+    R = 6371.0
+    
+    # Convert degrees to radians
+    lat1_rad = math.radians(lat1)
+    lon1_rad = math.radians(lon1)
+    lat2_rad = math.radians(lat2)
+    lon2_rad = math.radians(lon2)
+    
+    # Differences
+    dlat = lat2_rad - lat1_rad
+    dlon = lon2_rad - lon1_rad
+    
+    # Haversine formula
+    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    distance = R * c
+    return distance
+
+
 def _skill_tokens(text: str):
     if not text:
         return []
@@ -656,20 +720,39 @@ def candidate_search(request):
                 except Exception:
                     pass
             
-            # Location matching
+            # Location matching with radius
             if location and profile.location:
                 try:
-                    # Simple text-based location matching
-                    # Check if search location is in candidate's location or vice versa
-                    location_lower = location.lower()
-                    profile_location_lower = profile.location.lower()
+                    # Try distance-based matching if coordinates are available
+                    search_lat, search_lon = _get_coordinates_from_location(location)
                     
-                    # Check for partial matches (e.g., "Atlanta" in "Atlanta, GA")
-                    if (location_lower in profile_location_lower or 
-                        profile_location_lower in location_lower or
-                        any(word in profile_location_lower for word in location_lower.split(','))):
-                        match_score += 5
-                        match_reasons.append(f"Location: {profile.location}")
+                    # Use stored coordinates if available, otherwise try to get them
+                    profile_lat = profile.latitude
+                    profile_lon = profile.longitude
+                    
+                    if not profile_lat or not profile_lon:
+                        profile_lat, profile_lon = _get_coordinates_from_location(profile.location)
+                    
+                    # If we have coordinates for both, calculate distance
+                    if search_lat and search_lon and profile_lat and profile_lon:
+                        distance_km = _calculate_distance(search_lat, search_lon, profile_lat, profile_lon)
+                        radius_km = int(radius) if radius.isdigit() else 50
+                        
+                        if distance_km <= radius_km:
+                            # Score based on proximity (closer = higher score)
+                            proximity_score = max(1, 10 - int(distance_km / (radius_km / 10)))
+                            match_score += proximity_score
+                            match_reasons.append(f"Location: {profile.location} ({int(distance_km)} km away)")
+                    else:
+                        # Fallback to text-based matching if no coordinates
+                        location_lower = location.lower()
+                        profile_location_lower = profile.location.lower()
+                        
+                        if (location_lower in profile_location_lower or 
+                            profile_location_lower in location_lower or
+                            any(word in profile_location_lower for word in location_lower.split(','))):
+                            match_score += 5
+                            match_reasons.append(f"Location: {profile.location}")
                 except Exception:
                     pass
             

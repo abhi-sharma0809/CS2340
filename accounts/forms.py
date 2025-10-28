@@ -45,6 +45,15 @@ class ProfileForm(forms.ModelForm):
     
     def save(self, commit=True):
         profile = super().save(commit=False)
+        
+        # Auto-fill coordinates if location is provided but coordinates aren't
+        if profile.location and (not profile.latitude or not profile.longitude):
+            from jobs.views import _get_coordinates_from_location
+            lat, lon = _get_coordinates_from_location(profile.location)
+            if lat and lon:
+                profile.latitude = lat
+                profile.longitude = lon
+        
         if commit:
             profile.save()
             # Update user email if provided
