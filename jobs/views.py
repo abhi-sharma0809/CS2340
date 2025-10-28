@@ -720,7 +720,8 @@ def candidate_search(request):
                 except Exception:
                     pass
             
-            # Location matching with radius
+            # Location matching with radius (HARD FILTER when location specified)
+            location_match = False
             if location and profile.location:
                 try:
                     # Try distance-based matching if coordinates are available
@@ -739,10 +740,13 @@ def candidate_search(request):
                         radius_km = int(radius) if radius.isdigit() else 50
                         
                         if distance_km <= radius_km:
+                            # Within radius - candidate qualifies
+                            location_match = True
                             # Score based on proximity (closer = higher score)
                             proximity_score = max(1, 10 - int(distance_km / (radius_km / 10)))
                             match_score += proximity_score
                             match_reasons.append(f"Location: {profile.location} ({int(distance_km)} km away)")
+                        # If outside radius, location_match stays False
                     else:
                         # Fallback to text-based matching if no coordinates
                         location_lower = location.lower()
@@ -751,12 +755,17 @@ def candidate_search(request):
                         if (location_lower in profile_location_lower or 
                             profile_location_lower in location_lower or
                             any(word in profile_location_lower for word in location_lower.split(','))):
+                            location_match = True
                             match_score += 5
                             match_reasons.append(f"Location: {profile.location}")
                 except Exception:
                     pass
+            elif not location:
+                # If no location search specified, all candidates qualify
+                location_match = True
             
-            if match_score > 0:
+            # Only include candidate if they have matches AND pass location filter
+            if match_score > 0 and location_match:
                 candidates.append({
                     'user': user,
                     'profile': profile,
