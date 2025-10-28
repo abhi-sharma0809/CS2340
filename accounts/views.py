@@ -19,7 +19,11 @@ def signup(request):
         form = JobSeekerRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            Profile.objects.get_or_create(user=user)  # create blank profile
+            # Create profile with default location (empty is fine for job seekers)
+            Profile.objects.get_or_create(
+                user=user,
+                defaults={'location': ''}
+            )
             login(request, user)
             return redirect("accounts:profile")
     else:
@@ -29,12 +33,20 @@ def signup(request):
 
 @login_required
 def view_profile(request):
-    profile, _ = Profile.objects.get_or_create(user=request.user)
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    # Ensure location is set for recruiters
+    if profile.user_type == 'recruiter' and not profile.location:
+        profile.location = 'N/A - Recruiter'
+        profile.save()
     return render(request, "accounts/profile_detail.html", {"profile": profile})
 
 @login_required
 def edit_profile(request):
-    profile, _ = Profile.objects.get_or_create(user=request.user)
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    # Ensure location is set for recruiters
+    if profile.user_type == 'recruiter' and not profile.location:
+        profile.location = 'N/A - Recruiter'
+        profile.save()
     if request.method == "POST":
         form = ProfileForm(request.POST, instance=profile)
         if form.is_valid():
@@ -46,7 +58,11 @@ def edit_profile(request):
 
 def public_profile(request, username):
     owner = get_object_or_404(User, username=username)
-    profile, _ = Profile.objects.get_or_create(user=owner)
+    profile, created = Profile.objects.get_or_create(user=owner)
+    # Ensure location is set for recruiters
+    if profile.user_type == 'recruiter' and not profile.location:
+        profile.location = 'N/A - Recruiter'
+        profile.save()
     if not profile.is_public and request.user != owner:
         return HttpResponseForbidden("This profile is private.")
     return render(request, "accounts/public_profile.html", {"owner": owner, "profile": profile})
@@ -57,8 +73,18 @@ def recruiter_signup(request):
         form = RecruiterRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            # Create profile with recruiter type
-            profile, _ = Profile.objects.get_or_create(user=user, user_type='recruiter')
+            # Create profile with recruiter type and default location
+            profile, _ = Profile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'user_type': 'recruiter',
+                    'location': 'N/A - Recruiter'
+                }
+            )
+            # Ensure location is set even if profile already existed
+            if not profile.location:
+                profile.location = 'N/A - Recruiter'
+                profile.save()
             login(request, user)
             messages.success(request, "Welcome! Please complete your company profile.")
             return redirect("accounts:recruiter_profile")
