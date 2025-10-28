@@ -1,140 +1,193 @@
+"""
+Management command to check saved searches for new candidate matches
+and notify recruiters.
+
+Run this command periodically (e.g., via cron job):
+    python manage.py check_saved_searches
+"""
+
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
 from jobs.models import SavedSearch, SearchNotification
-from accounts.models import Profile
-import re
+from accounts.models import Profile, Message
 
 User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Check saved searches for new candidate matches and send notifications'
+    help = 'Check saved searches for new candidate matches and notify recruiters'
 
     def add_arguments(self, parser):
         parser.add_argument(
+            '--hours',
+            type=int,
+            default=24,
+            help='Only check profiles updated in the last N hours (default: 24)'
+        )
+        parser.add_argument(
             '--dry-run',
             action='store_true',
-            help='Show what would be done without actually sending notifications',
+            help='Run without actually sending notifications'
         )
 
     def handle(self, *args, **options):
+        hours = options['hours']
         dry_run = options['dry_run']
         
         if dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN MODE - No notifications will be sent'))
         
-        # Get all active saved searches with notifications enabled
-        saved_searches = SavedSearch.objects.filter(
-            notify_on_new_matches=True
-        )
+        # Get all saved searches with notifications enabled
+        saved_searches = SavedSearch.objects.filter(notify_on_new_matches=True)
+        
+        self.stdout.write(f'Checking {saved_searches.count()} saved searches...')
         
         total_notifications = 0
+        cutoff_time = timezone.now() - timedelta(hours=hours)
         
         for search in saved_searches:
-            self.stdout.write(f'Checking search: {search.name}')
-            
-            # Find new matches since last notification
-            new_matches = self.find_new_matches(search)
-            
-            if new_matches:
-                self.stdout.write(f'  Found {len(new_matches)} new matches')
-                
-                if not dry_run:
-                    # Create notification records
-                    for candidate in new_matches:
-                        SearchNotification.objects.get_or_create(
-                            saved_search=search,
-                            candidate=candidate
-                        )
-                    
-                    # Update last notified timestamp
-                    search.last_notified = timezone.now()
-                    search.save()
-                
-                total_notifications += len(new_matches)
-            else:
-                self.stdout.write('  No new matches found')
+            notifications_sent = self._check_search(search, cutoff_time, dry_run)
+            total_notifications += notifications_sent
         
         if dry_run:
-            self.stdout.write(
-                self.style.SUCCESS(f'Would send {total_notifications} notifications')
-            )
+            self.stdout.write(self.style.SUCCESS(
+                f'DRY RUN: Would have sent {total_notifications} notifications'
+            ))
         else:
-            self.stdout.write(
-                self.style.SUCCESS(f'Sent {total_notifications} notifications')
-            )
+            self.stdout.write(self.style.SUCCESS(
+                f'Successfully sent {total_notifications} notifications'
+            ))
 
-    def find_new_matches(self, search):
-        """Find new candidate matches for a saved search"""
-        # Get job seekers
+    def _check_search(self, search, cutoff_time, dry_run):
+        """Check a single saved search for new matches"""
+        notifications_sent = 0
+        
+        # Get job seekers who match the search criteria
         job_seekers = User.objects.filter(
             profile__user_type='job_seeker',
             profile__is_public=True
         ).select_related('profile')
         
-        new_matches = []
+        # Only check recently updated profiles
+        # Filter by user's last_login as a proxy for profile updates
+        # In production, you'd want a last_updated field on Profile
+        if search.last_notified:
+            job_seekers = job_seekers.filter(
+                last_login__gte=search.last_notified
+            )
         
         for user in job_seekers:
-            profile = user.profile
+            try:
+                profile = user.profile
+            except Profile.DoesNotExist:
+                continue
             
-            # Check if this candidate matches the search criteria
-            if self.matches_search_criteria(profile, search):
-                # Check if we've already notified about this candidate
-                if not SearchNotification.objects.filter(
-                    saved_search=search,
-                    candidate=user
-                ).exists():
-                    new_matches.append(user)
+            # Check if we've already notified about this candidate
+            if SearchNotification.objects.filter(
+                saved_search=search,
+                candidate=user
+            ).exists():
+                continue
+            
+            # Calculate match score
+            match_score = self._calculate_match_score(profile, search)
+            
+            if match_score > 0:
+                # Send notification
+                if not dry_run:
+                    self._send_notification(search, user, profile, match_score)
+                    
+                    # Create notification record
+                    SearchNotification.objects.create(
+                        saved_search=search,
+                        candidate=user
+                    )
+                
+                notifications_sent += 1
+                self.stdout.write(
+                    f'  ✓ New match: {user.username} (score: {match_score}) '
+                    f'for search "{search.name}"'
+                )
         
-        return new_matches
+        # Update last_notified timestamp
+        if not dry_run and notifications_sent > 0:
+            search.last_notified = timezone.now()
+            search.save()
+        
+        return notifications_sent
 
-    def matches_search_criteria(self, profile, search):
-        """Check if a profile matches the search criteria"""
+    def _calculate_match_score(self, profile, search):
+        """Calculate how well a profile matches a saved search"""
         match_score = 0
         
         # Skills matching
-        if search.skills:
-            user_skills = self._skill_tokens(profile.skills or '')
-            search_skills = self._skill_tokens(search.skills)
-            skill_matches = len(set(user_skills) & set(search_skills))
-            if skill_matches > 0:
+        if search.skills and profile.skills:
+            try:
+                from jobs.views import _skill_tokens
+                user_skills = set(_skill_tokens(profile.skills))
+                search_skills = set(_skill_tokens(search.skills))
+                skill_matches = len(user_skills & search_skills)
                 match_score += skill_matches * 10
+            except Exception:
+                pass
         
         # Education matching
         if search.education_keywords and profile.education:
             education_lower = profile.education.lower()
             education_keywords = search.education_keywords.lower().split()
-            education_matches = sum(1 for keyword in education_keywords if keyword in education_lower)
-            if education_matches > 0:
-                match_score += education_matches * 5
+            matches = sum(1 for keyword in education_keywords if keyword in education_lower)
+            match_score += matches * 5
         
         # Experience matching
         if search.experience_keywords and profile.experience:
             experience_lower = profile.experience.lower()
             experience_keywords = search.experience_keywords.lower().split()
-            experience_matches = sum(1 for keyword in experience_keywords if keyword in experience_lower)
-            if experience_matches > 0:
-                match_score += experience_matches * 5
+            matches = sum(1 for keyword in experience_keywords if keyword in experience_lower)
+            match_score += matches * 5
         
-        # Location matching (simplified)
-        if search.location and profile.commute_radius_km:
-            # This is a simplified location match
-            if search.location.lower() in (profile.user.email.split('@')[1] if '@' in profile.user.email else ''):
-                match_score += 3
+        # Location matching
+        if search.location and profile.location:
+            location_lower = search.location.lower()
+            profile_location_lower = profile.location.lower()
+            
+            if (location_lower in profile_location_lower or 
+                profile_location_lower in location_lower or
+                any(word in profile_location_lower for word in location_lower.split(','))):
+                match_score += 5
         
-        # Return True if there's any match
-        return match_score > 0
+        return match_score
 
-    def _skill_tokens(self, text):
-        """Extract skill tokens from text"""
-        if not text:
-            return []
-        # Split on commas/newlines and non-alphanumerics; lower-case; dedupe
-        raw = re.split(r"[,\n]+", text)
-        tokens = []
-        for chunk in raw:
-            for t in re.findall(r"[A-Za-z0-9+#\.]+", chunk.lower()):
-                if len(t) >= 2:
-                    tokens.append(t)
-        return list(dict.fromkeys(tokens))  # preserve order, remove dups
+    def _send_notification(self, search, user, profile, match_score):
+        """Send a notification message to the recruiter about the new match"""
+        
+        # Build match details
+        match_details = []
+        if profile.skills:
+            match_details.append(f"Skills: {profile.skills[:100]}")
+        if profile.location:
+            match_details.append(f"Location: {profile.location}")
+        if profile.education:
+            match_details.append(f"Education: {profile.education[:100]}")
+        
+        details_text = '\n'.join(f"• {detail}" for detail in match_details[:3])
+        
+        subject = f'New candidate match for "{search.name}"'
+        body = f'''A new candidate matches your saved search "{search.name}"!
+
+Candidate: {user.get_full_name() or user.username}
+Match Score: {match_score} points
+
+{details_text}
+
+View their full profile to learn more about them.
+'''
+        
+        # Create in-platform message
+        Message.objects.create(
+            sender=User.objects.filter(is_superuser=True).first() or search.recruiter,
+            recipient=search.recruiter,
+            subject=subject,
+            body=body
+        )

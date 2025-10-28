@@ -17,6 +17,11 @@ class Profile(models.Model):
     education = models.TextField(blank=True)
     experience = models.TextField(blank=True)
     links = models.TextField(blank=True)
+    
+    # Location fields
+    location = models.CharField(max_length=200, blank=True, help_text="City, State or City, Country")
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     # Privacy
     is_public = models.BooleanField(default=True)  # global gate

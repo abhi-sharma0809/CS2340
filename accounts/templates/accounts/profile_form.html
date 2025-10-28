@@ -14,6 +14,11 @@
       {{ form.headline.errors }} {{ form.headline.label_tag }} {{ form.headline }}
       
       <div style="margin-top: 16px;">
+        {{ form.location.errors }} {{ form.location.label_tag }} {{ form.location }}
+        <p style="margin:6px 0 0; color:#6b7280; font-size: 14px;">{{ form.location.help_text }}</p>
+      </div>
+      
+      <div style="margin-top: 16px;">
         {{ form.email.errors }} {{ form.email.label_tag }} {{ form.email }}
         <p style="margin:6px 0 0; color:#6b7280; font-size: 14px;">{{ form.email.help_text }}</p>
       </div>

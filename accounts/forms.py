@@ -12,7 +12,7 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = [
-            "headline", "skills", "education", "experience", "links",
+            "headline", "location", "skills", "education", "experience", "links",
             "is_public", "show_skills", "show_education", "show_experience", "show_links",
             "commute_radius_km",
         ]
@@ -22,12 +22,15 @@ class ProfileForm(forms.ModelForm):
             "show_education": "Allow recruiters to see your education.",
             "show_experience": "Allow recruiters to see your experience.",
             "show_links": "Allow recruiters to see your links (GitHub, LinkedIn, portfolio).",
+            "location": "Your current location (e.g., Atlanta, GA)",
+            "commute_radius_km": "Maximum distance you're willing to commute (in km)",
         }
         widgets = {
             "skills": forms.Textarea(attrs={"rows": 3}),
             "education": forms.Textarea(attrs={"rows": 3}),
             "experience": forms.Textarea(attrs={"rows": 3}),
             "links": forms.Textarea(attrs={"rows": 2, "placeholder": "One per line"}),
+            "location": forms.TextInput(attrs={"placeholder": "e.g., Atlanta, GA"}),
         }
     
     def __init__(self, *args, **kwargs):
