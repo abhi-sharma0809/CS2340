@@ -7,9 +7,10 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django.utils import timezone
 from .models import Job, JobApplication, PipelineStage, ApplicationPipeline, SavedSearch, SearchNotification
 from .forms import JobPostForm
-from accounts.models import Profile
+from accounts.models import Profile, Message
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -819,103 +820,104 @@ def search_notifications(request):
 @require_POST
 def trigger_saved_search_check(request):
     """Manually trigger saved search check for new matches (for testing)"""
-    # Check if user is a recruiter
     try:
-        profile = Profile.objects.get(user=request.user)
-        if not profile.is_recruiter:
-            return JsonResponse({'error': 'Access denied'}, status=403)
-    except Profile.DoesNotExist:
-        return JsonResponse({'error': 'Profile not found'}, status=404)
-    
-    # Get all saved searches for this recruiter with notifications enabled
-    saved_searches = SavedSearch.objects.filter(
-        recruiter=request.user,
-        notify_on_new_matches=True
-    )
-    
-    if not saved_searches.exists():
-        return JsonResponse({
-            'success': False,
-            'message': 'No saved searches with notifications enabled'
-        })
-    
-    total_new_matches = 0
-    
-    for search in saved_searches:
-        # Get job seekers
-        job_seekers = User.objects.filter(
-            profile__user_type='job_seeker',
-            profile__is_public=True
-        ).select_related('profile')
+        # Check if user is a recruiter
+        try:
+            profile = Profile.objects.get(user=request.user)
+            if not profile.is_recruiter:
+                return JsonResponse({'error': 'Access denied'}, status=403)
+        except Profile.DoesNotExist:
+            return JsonResponse({'error': 'Profile not found'}, status=404)
         
-        for user in job_seekers:
-            try:
-                profile = user.profile
-            except Profile.DoesNotExist:
-                continue
+        # Get all saved searches for this recruiter with notifications enabled
+        saved_searches = SavedSearch.objects.filter(
+            recruiter=request.user,
+            notify_on_new_matches=True
+        )
+        
+        if not saved_searches.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'No saved searches with notifications enabled'
+            })
+        
+        total_new_matches = 0
+        
+        for search in saved_searches:
+            # Get job seekers
+            job_seekers = User.objects.filter(
+                profile__user_type='job_seeker',
+                profile__is_public=True
+            ).select_related('profile')
             
-            # Check if we've already notified about this candidate
-            if SearchNotification.objects.filter(
-                saved_search=search,
-                candidate=user
-            ).exists():
-                continue
-            
-            # Calculate match score using the same logic as candidate_search
-            match_score = 0
-            
-            # Skills matching
-            if search.skills and profile.skills:
+            for user in job_seekers:
                 try:
-                    user_skills = _skill_tokens(profile.skills or '')
-                    search_skills = _skill_tokens(search.skills)
-                    skill_matches = len(set(user_skills) & set(search_skills))
-                    if skill_matches > 0:
-                        match_score += skill_matches * 10
-                except Exception:
-                    pass
-            
-            # Education matching
-            if search.education_keywords and profile.education:
-                education_lower = profile.education.lower()
-                education_keywords = search.education_keywords.lower().split()
-                matches = sum(1 for keyword in education_keywords if keyword in education_lower)
-                if matches > 0:
-                    match_score += matches * 5
-            
-            # Experience matching
-            if search.experience_keywords and profile.experience:
-                experience_lower = profile.experience.lower()
-                experience_keywords = search.experience_keywords.lower().split()
-                matches = sum(1 for keyword in experience_keywords if keyword in experience_lower)
-                if matches > 0:
-                    match_score += matches * 5
-            
-            # Location matching
-            if search.location and profile.location:
-                location_lower = search.location.lower()
-                profile_location_lower = profile.location.lower()
+                    profile = user.profile
+                except Profile.DoesNotExist:
+                    continue
                 
-                if (location_lower in profile_location_lower or 
-                    profile_location_lower in location_lower or
-                    any(word in profile_location_lower for word in location_lower.split(','))):
-                    match_score += 5
-            
-            # If there's a match, send notification
-            if match_score > 0:
-                # Build match details
-                match_details = []
-                if profile.skills:
-                    match_details.append(f"Skills: {profile.skills[:100]}")
-                if profile.location:
-                    match_details.append(f"Location: {profile.location}")
-                if profile.education:
-                    match_details.append(f"Education: {profile.education[:100]}")
+                # Check if we've already notified about this candidate
+                if SearchNotification.objects.filter(
+                    saved_search=search,
+                    candidate=user
+                ).exists():
+                    continue
                 
-                details_text = '\n'.join(f"• {detail}" for detail in match_details[:3])
+                # Calculate match score using the same logic as candidate_search
+                match_score = 0
                 
-                subject = f'New candidate match for "{search.name}"'
-                body = f'''A new candidate matches your saved search "{search.name}"!
+                # Skills matching
+                if search.skills and profile.skills:
+                    try:
+                        user_skills = _skill_tokens(profile.skills or '')
+                        search_skills = _skill_tokens(search.skills)
+                        skill_matches = len(set(user_skills) & set(search_skills))
+                        if skill_matches > 0:
+                            match_score += skill_matches * 10
+                    except Exception:
+                        pass
+                
+                # Education matching
+                if search.education_keywords and profile.education:
+                    education_lower = profile.education.lower()
+                    education_keywords = search.education_keywords.lower().split()
+                    matches = sum(1 for keyword in education_keywords if keyword in education_lower)
+                    if matches > 0:
+                        match_score += matches * 5
+                
+                # Experience matching
+                if search.experience_keywords and profile.experience:
+                    experience_lower = profile.experience.lower()
+                    experience_keywords = search.experience_keywords.lower().split()
+                    matches = sum(1 for keyword in experience_keywords if keyword in experience_lower)
+                    if matches > 0:
+                        match_score += matches * 5
+                
+                # Location matching
+                if search.location and profile.location:
+                    location_lower = search.location.lower()
+                    profile_location_lower = profile.location.lower()
+                    
+                    if (location_lower in profile_location_lower or 
+                        profile_location_lower in location_lower or
+                        any(word in profile_location_lower for word in location_lower.split(','))):
+                        match_score += 5
+                
+                # If there's a match, send notification
+                if match_score > 0:
+                    # Build match details
+                    match_details = []
+                    if profile.skills:
+                        match_details.append(f"Skills: {profile.skills[:100]}")
+                    if profile.location:
+                        match_details.append(f"Location: {profile.location}")
+                    if profile.education:
+                        match_details.append(f"Education: {profile.education[:100]}")
+                    
+                    details_text = '\n'.join(f"• {detail}" for detail in match_details[:3])
+                    
+                    subject = f'New candidate match for "{search.name}"'
+                    body = f'''A new candidate matches your saved search "{search.name}"!
 
 Candidate: {user.get_full_name() or user.username}
 Match Score: {match_score} points
@@ -926,30 +928,38 @@ View their profile at: /accounts/profile/{user.username}/
 
 Click here to view all notifications for this search.
 '''
-                
-                # Create in-platform message
-                Message.objects.create(
-                    sender=request.user,
-                    recipient=request.user,
-                    subject=subject,
-                    body=body
-                )
-                
-                # Create notification record
-                SearchNotification.objects.create(
-                    saved_search=search,
-                    candidate=user
-                )
-                
-                total_new_matches += 1
+                    
+                    # Create in-platform message
+                    Message.objects.create(
+                        sender=request.user,
+                        recipient=request.user,
+                        subject=subject,
+                        body=body
+                    )
+                    
+                    # Create notification record
+                    SearchNotification.objects.create(
+                        saved_search=search,
+                        candidate=user
+                    )
+                    
+                    total_new_matches += 1
+            
+            # Update last_notified timestamp
+            if total_new_matches > 0:
+                search.last_notified = timezone.now()
+                search.save()
         
-        # Update last_notified timestamp
-        if total_new_matches > 0:
-            search.last_notified = timezone.now()
-            search.save()
+        return JsonResponse({
+            'success': True,
+            'message': f'Found {total_new_matches} new candidate matches!',
+            'new_matches': total_new_matches
+        })
     
-    return JsonResponse({
-        'success': True,
-        'message': f'Found {total_new_matches} new candidate matches!',
-        'new_matches': total_new_matches
-    })
+    except Exception as e:
+        # Return detailed error for debugging
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'message': f'An error occurred while checking for matches: {str(e)}'
+        }, status=500)
