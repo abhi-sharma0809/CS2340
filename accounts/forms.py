@@ -37,6 +37,11 @@ class ProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.user:
             self.fields['email'].initial = self.instance.user.email
+            
+            # Make location not required for recruiters
+            if self.instance.user_type == 'recruiter':
+                self.fields['location'].required = False
+                self.fields['location'].widget = forms.HiddenInput()  # Hide for recruiters
     
     def save(self, commit=True):
         profile = super().save(commit=False)
