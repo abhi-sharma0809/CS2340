@@ -21,7 +21,7 @@ class Profile(models.Model):
     links = models.TextField(blank=True)
     
     # Location fields
-    location = models.CharField(max_length=200, blank=True, help_text="City, State or City, Country")
+    location = models.CharField(max_length=200, blank=True, default='', help_text="City, State or City, Country")
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
 
