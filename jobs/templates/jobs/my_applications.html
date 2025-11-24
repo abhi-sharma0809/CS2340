@@ -50,11 +50,19 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     border-left: 4px solid;
     transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
   }
-  
+
   .stat-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .stat-card.active {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-width: 3px;
   }
   
   .stat-card.total { border-left-color: #6366f1; }
@@ -444,27 +452,27 @@
   {% if applications %}
     <!-- Application Statistics -->
     <div class="stats-container">
-      <div class="stat-card total">
+      <div class="stat-card total active" onclick="filterApplications('all')" data-filter="all">
         <div class="stat-number">{{ applications|length }}</div>
         <div class="stat-label">Total Applications</div>
       </div>
-      <div class="stat-card applied">
+      <div class="stat-card applied" onclick="filterApplications('applied')" data-filter="applied">
         <div class="stat-number">{{ stats.applied }}</div>
         <div class="stat-label">Applied</div>
       </div>
-      <div class="stat-card reviewed">
+      <div class="stat-card reviewed" onclick="filterApplications('reviewed')" data-filter="reviewed">
         <div class="stat-number">{{ stats.reviewed }}</div>
         <div class="stat-label">Under Review</div>
       </div>
-      <div class="stat-card interview">
+      <div class="stat-card interview" onclick="filterApplications('interview')" data-filter="interview">
         <div class="stat-number">{{ stats.interview }}</div>
         <div class="stat-label">Interviews</div>
       </div>
-      <div class="stat-card accepted">
+      <div class="stat-card accepted" onclick="filterApplications('accepted')" data-filter="accepted">
         <div class="stat-number">{{ stats.accepted }}</div>
         <div class="stat-label">Accepted</div>
       </div>
-      <div class="stat-card rejected">
+      <div class="stat-card rejected" onclick="filterApplications('rejected')" data-filter="rejected">
         <div class="stat-number">{{ stats.rejected }}</div>
         <div class="stat-label">Rejected</div>
       </div>
@@ -473,7 +481,7 @@
     <!-- Applications List -->
     <div class="applications-grid">
       {% for application in applications %}
-        <div class="application-card">
+        <div class="application-card" data-status="{{ application.status }}">
           <div class="application-header">
             <div class="application-title">
               <h3>
@@ -615,13 +623,45 @@ function toggleTimeline(applicationId) {
   const timeline = document.getElementById('timeline-' + applicationId);
   const button = event.currentTarget;
   const span = button.querySelector('span');
-  
+
   if (timeline.classList.contains('show')) {
     timeline.classList.remove('show');
     span.textContent = 'View Status History';
   } else {
     timeline.classList.add('show');
     span.textContent = 'Hide Status History';
+  }
+}
+
+function filterApplications(status) {
+  // Remove active class from all stat cards
+  document.querySelectorAll('.stat-card').forEach(card => {
+    card.classList.remove('active');
+  });
+
+  // Add active class to clicked card
+  event.currentTarget.classList.add('active');
+
+  // Get all application cards
+  const applications = document.querySelectorAll('.application-card');
+
+  // Filter applications
+  applications.forEach(app => {
+    if (status === 'all') {
+      app.style.display = 'block';
+    } else {
+      if (app.dataset.status === status) {
+        app.style.display = 'block';
+      } else {
+        app.style.display = 'none';
+      }
+    }
+  });
+
+  // Scroll to applications
+  const grid = document.querySelector('.applications-grid');
+  if (grid) {
+    grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 </script>

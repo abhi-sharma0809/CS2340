@@ -116,6 +116,46 @@ class EmailLog(models.Model):
         return f"Email from {self.sender.username} to {self.recipient_email}: {self.subject}"
 
 
+class Education(models.Model):
+    """Structured education entries for job seekers"""
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='education_entries')
+    school_name = models.CharField(max_length=200, help_text="University or school name")
+    degree = models.CharField(max_length=100, blank=True, help_text="e.g., Bachelor of Science, Master's")
+    field_of_study = models.CharField(max_length=100, blank=True, help_text="e.g., Computer Science, Business")
+    gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, help_text="e.g., 3.75")
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True, help_text="Leave blank if currently enrolled")
+    description = models.TextField(blank=True, help_text="Activities, honors, coursework, etc.")
+    order = models.PositiveIntegerField(default=0, help_text="Display order (0 = most recent)")
+
+    class Meta:
+        ordering = ['order', '-end_date']
+        verbose_name_plural = 'Education entries'
+
+    def __str__(self):
+        return f"{self.degree} at {self.school_name}"
+
+
+class WorkExperience(models.Model):
+    """Structured work experience entries for job seekers"""
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='work_experiences')
+    job_title = models.CharField(max_length=150, help_text="e.g., Software Engineer, Product Manager")
+    company_name = models.CharField(max_length=200, help_text="Company or organization name")
+    location = models.CharField(max_length=100, blank=True, help_text="City, State")
+    start_date = models.DateField(help_text="When you started this role")
+    end_date = models.DateField(null=True, blank=True, help_text="Leave blank if current position")
+    is_current = models.BooleanField(default=False, help_text="Check if this is your current role")
+    description = models.TextField(blank=True, help_text="Key responsibilities and achievements")
+    order = models.PositiveIntegerField(default=0, help_text="Display order (0 = most recent)")
+
+    class Meta:
+        ordering = ['order', '-start_date']
+        verbose_name_plural = 'Work experiences'
+
+    def __str__(self):
+        return f"{self.job_title} at {self.company_name}"
+
+
 # Signal to set default location for recruiters
 @receiver(pre_save, sender=Profile)
 def set_recruiter_default_location(sender, instance, **kwargs):

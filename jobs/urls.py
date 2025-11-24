@@ -13,10 +13,13 @@ urlpatterns = [
     path("post/", views.post_job, name="post"),
     path("<int:pk>/edit/", views.edit_job, name="edit"),
     path("my-jobs/", views.my_jobs, name="my_jobs"),
+    path("my-jobs-map/", views.my_jobs_map, name="my_jobs_map"),
     path("<int:pk>/applicants/", views.job_applicants, name="applicants"),
+    path("<int:job_id>/applicants-map/", views.job_applicants_map, name="applicants_map"),
     path("api/update-application-status/<int:application_id>/", views.update_application_status, name="update_application_status"),
     # API endpoints
     path("api/candidates/", views.search_candidates, name="search_candidates"),
+    path("api/job-recommendations/<int:job_id>/", views.job_candidate_recommendations, name="job_candidate_recommendations"),
     # Removed standalone map routes; map functionality lives on the Jobs list page
     
     # New recruiter functionality
