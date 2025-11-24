@@ -99,16 +99,11 @@
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card h-100">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h5 class="card-title mb-1">
-                                            {{ candidate.user.get_full_name|default:candidate.user.username }}
-                                        </h5>
-                                        <p class="text-muted small mb-0">{{ candidate.user.email }}</p>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="badge bg-primary">{{ candidate.match_score }}% match</span>
-                                    </div>
+                                <div class="mb-3">
+                                    <h5 class="card-title mb-1">
+                                        {{ candidate.user.get_full_name|default:candidate.user.username }}
+                                    </h5>
+                                    <p class="text-muted small mb-0">{{ candidate.user.email }}</p>
                                 </div>
                                 
                                 {% if candidate.profile.headline %}
