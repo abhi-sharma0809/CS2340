@@ -21,4 +21,15 @@ urlpatterns = [
     path("send-reply/", views.send_reply, name="send_reply"),
     path("emails/", views.get_emails, name="get_emails"),
     path("mark-read/<int:message_id>/", views.mark_message_read, name="mark_message_read"),
+    
+    # Admin URLs
+    path("admin/", views.admin_dashboard, name="admin_dashboard"),
+    path("admin/users/", views.admin_users, name="admin_users"),
+    path("admin/users/<int:user_id>/toggle-status/", views.admin_toggle_user_status, name="admin_toggle_user_status"),
+    path("admin/users/<int:user_id>/change-role/", views.admin_change_user_role, name="admin_change_user_role"),
+    path("admin/users/<int:user_id>/delete/", views.admin_delete_user, name="admin_delete_user"),
+    path("admin/jobs/", views.admin_jobs, name="admin_jobs"),
+    path("admin/jobs/<int:job_id>/toggle-status/", views.admin_toggle_job_status, name="admin_toggle_job_status"),
+    path("admin/jobs/<int:job_id>/delete/", views.admin_delete_job, name="admin_delete_job"),
+    path("admin/export/", views.admin_export_data, name="admin_export_data"),
 ]

@@ -6,6 +6,22 @@ from django.utils import timezone
 User = get_user_model()
 
 class Job(models.Model):
+    JOB_TYPE_CHOICES = [
+        ('full_time', 'Full Time'),
+        ('part_time', 'Part Time'),
+        ('contract', 'Contract'),
+        ('internship', 'Internship'),
+        ('temporary', 'Temporary'),
+    ]
+    
+    EXPERIENCE_LEVEL_CHOICES = [
+        ('entry', 'Entry Level'),
+        ('mid', 'Mid Level'),
+        ('senior', 'Senior Level'),
+        ('lead', 'Lead'),
+        ('executive', 'Executive'),
+    ]
+    
     title = models.CharField(max_length=120)
     description = models.TextField()
     location = models.CharField(max_length=120, blank=True)
@@ -16,10 +32,17 @@ class Job(models.Model):
     salary_max = models.IntegerField(null=True, blank=True)
     is_remote = models.BooleanField(default=False)
     visa_sponsorship = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, help_text="Whether this job is currently active/visible")
+    posted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='posted_jobs', help_text="Recruiter who posted this job")
     created_at = models.DateTimeField(auto_now_add=True)
     # Company information
+    company = models.CharField(max_length=120, blank=True, help_text="Company name (legacy field, use company_name)")
     company_name = models.CharField(max_length=120, blank=True)
     company_logo = models.URLField(blank=True, help_text="URL to company logo image")
+    # Job details
+    job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES, default='full_time')
+    experience_level = models.CharField(max_length=20, choices=EXPERIENCE_LEVEL_CHOICES, default='entry')
+    required_skills = models.TextField(blank=True, help_text="Comma-separated list of required skills")
     
     class Meta:
         ordering = ['-created_at']

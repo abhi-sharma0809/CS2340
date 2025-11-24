@@ -69,6 +69,11 @@
       <div class="nav-links">
         <a href="{% url 'jobs:list' %}">Jobs</a>
         {% if request.user.is_authenticated %}
+          {% if request.user.is_staff %}
+            <a href="{% url 'accounts:admin_dashboard' %}" style="color: #ef4444; font-weight: 700;">
+              <i class="fas fa-shield-alt"></i> Admin
+            </a>
+          {% endif %}
           {% if request.user.profile.is_recruiter %}
             <a href="{% url 'accounts:recruiter_dashboard' %}">Dashboard</a>
             <a href="{% url 'jobs:my_jobs' %}">My Jobs</a>

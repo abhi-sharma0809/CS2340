@@ -12,7 +12,7 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = [
-            "headline", "skills", "education", "experience", "links",
+            "headline", "location", "skills", "education", "experience", "links",
             "is_public", "show_skills", "show_education", "show_experience", "show_links",
             "commute_radius_km",
         ]
@@ -22,21 +22,38 @@ class ProfileForm(forms.ModelForm):
             "show_education": "Allow recruiters to see your education.",
             "show_experience": "Allow recruiters to see your experience.",
             "show_links": "Allow recruiters to see your links (GitHub, LinkedIn, portfolio).",
+            "location": "Your current location (e.g., Atlanta, GA)",
+            "commute_radius_km": "Maximum distance you're willing to commute (in km)",
         }
         widgets = {
             "skills": forms.Textarea(attrs={"rows": 3}),
             "education": forms.Textarea(attrs={"rows": 3}),
             "experience": forms.Textarea(attrs={"rows": 3}),
             "links": forms.Textarea(attrs={"rows": 2, "placeholder": "One per line"}),
+            "location": forms.TextInput(attrs={"placeholder": "e.g., Atlanta, GA"}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.user:
             self.fields['email'].initial = self.instance.user.email
+            
+            # Make location not required for recruiters
+            if self.instance.user_type == 'recruiter':
+                self.fields['location'].required = False
+                self.fields['location'].widget = forms.HiddenInput()  # Hide for recruiters
     
     def save(self, commit=True):
         profile = super().save(commit=False)
+        
+        # Auto-fill coordinates if location is provided but coordinates aren't
+        if profile.location and (not profile.latitude or not profile.longitude):
+            from jobs.views import _get_coordinates_from_location
+            lat, lon = _get_coordinates_from_location(profile.location)
+            if lat and lon:
+                profile.latitude = lat
+                profile.longitude = lon
+        
         if commit:
             profile.save()
             # Update user email if provided

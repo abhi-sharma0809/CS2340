@@ -10,6 +10,9 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Saved Searches</h2>
                 <div>
+                    <button onclick="checkForNewMatches()" class="btn btn-success me-2" id="checkMatchesBtn">
+                        <i class="fas fa-sync"></i> Check for New Matches
+                    </button>
                     <a href="{% url 'jobs:search_notifications' %}" class="btn btn-outline-info me-2">
                         <i class="fas fa-bell"></i> Notifications
                     </a>
@@ -181,6 +184,46 @@ function deleteSearch(searchId) {
         // In a real implementation, you'd make an AJAX call to delete the search
         alert('Delete functionality would be implemented here');
     }
+}
+
+function checkForNewMatches() {
+    const btn = document.getElementById('checkMatchesBtn');
+    const originalText = btn.innerHTML;
+    
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+    
+    fetch('{% url "jobs:trigger_saved_search_check" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        if (data.success) {
+            if (data.new_matches > 0) {
+                alert(`✅ ${data.message}\n\nCheck your Messages tab to see the details!`);
+                // Update the badge in nav if it exists
+                window.location.reload();
+            } else {
+                alert('No new matches found at this time. We will continue to monitor and notify you automatically.');
+            }
+        } else {
+            alert(data.message || 'No saved searches with notifications enabled.');
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        console.error('Error:', error);
+        alert('An error occurred while checking for matches. Please try again.');
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {

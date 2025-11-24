@@ -3,13 +3,15 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.core.mail import send_mail
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db import models
+from django.contrib.admin.views.decorators import staff_member_required
+import csv
 from .models import Profile, RecruiterProfile, Message, EmailLog
 from .forms import ProfileForm, RecruiterRegistrationForm, RecruiterProfileForm, JobSeekerRegistrationForm
 from django.contrib.auth.models import User
@@ -19,7 +21,11 @@ def signup(request):
         form = JobSeekerRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            Profile.objects.get_or_create(user=user)  # create blank profile
+            # Create profile with default location (empty is fine for job seekers)
+            Profile.objects.get_or_create(
+                user=user,
+                defaults={'location': ''}
+            )
             login(request, user)
             return redirect("accounts:profile")
     else:
@@ -29,12 +35,20 @@ def signup(request):
 
 @login_required
 def view_profile(request):
-    profile, _ = Profile.objects.get_or_create(user=request.user)
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    # Ensure location is set for recruiters
+    if profile.user_type == 'recruiter' and not profile.location:
+        profile.location = 'N/A - Recruiter'
+        profile.save()
     return render(request, "accounts/profile_detail.html", {"profile": profile})
 
 @login_required
 def edit_profile(request):
-    profile, _ = Profile.objects.get_or_create(user=request.user)
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    # Ensure location is set for recruiters
+    if profile.user_type == 'recruiter' and not profile.location:
+        profile.location = 'N/A - Recruiter'
+        profile.save()
     if request.method == "POST":
         form = ProfileForm(request.POST, instance=profile)
         if form.is_valid():
@@ -46,7 +60,11 @@ def edit_profile(request):
 
 def public_profile(request, username):
     owner = get_object_or_404(User, username=username)
-    profile, _ = Profile.objects.get_or_create(user=owner)
+    profile, created = Profile.objects.get_or_create(user=owner)
+    # Ensure location is set for recruiters
+    if profile.user_type == 'recruiter' and not profile.location:
+        profile.location = 'N/A - Recruiter'
+        profile.save()
     if not profile.is_public and request.user != owner:
         return HttpResponseForbidden("This profile is private.")
     return render(request, "accounts/public_profile.html", {"owner": owner, "profile": profile})
@@ -57,8 +75,18 @@ def recruiter_signup(request):
         form = RecruiterRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            # Create profile with recruiter type
-            profile, _ = Profile.objects.get_or_create(user=user, user_type='recruiter')
+            # Create profile with recruiter type and default location
+            profile, _ = Profile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'user_type': 'recruiter',
+                    'location': 'N/A - Recruiter'
+                }
+            )
+            # Ensure location is set even if profile already existed
+            if not profile.location:
+                profile.location = 'N/A - Recruiter'
+                profile.save()
             login(request, user)
             messages.success(request, "Welcome! Please complete your company profile.")
             return redirect("accounts:recruiter_profile")
@@ -378,3 +406,332 @@ def send_reply(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ===========================
+# ADMIN VIEWS (Administrator User Stories)
+# ===========================
+
+@staff_member_required
+def admin_dashboard(request):
+    """Main admin dashboard"""
+    from jobs.models import Job, JobApplication
+    
+    # Get statistics
+    stats = {
+        'total_users': User.objects.count(),
+        'job_seekers': Profile.objects.filter(user_type='job_seeker').count(),
+        'recruiters': Profile.objects.filter(user_type='recruiter').count(),
+        'total_jobs': Job.objects.count(),
+        'active_jobs': Job.objects.filter(is_active=True).count(),
+        'total_applications': JobApplication.objects.count(),
+        'total_messages': Message.objects.count(),
+    }
+    
+    # Recent activity
+    recent_users = User.objects.order_by('-date_joined')[:5]
+    recent_jobs = Job.objects.order_by('-created_at')[:5]
+    
+    return render(request, 'accounts/admin_dashboard.html', {
+        'stats': stats,
+        'recent_users': recent_users,
+        'recent_jobs': recent_jobs,
+    })
+
+
+@staff_member_required
+def admin_users(request):
+    """User management - view, edit roles, deactivate users"""
+    search_query = request.GET.get('search', '')
+    user_type = request.GET.get('type', '')
+    
+    users = User.objects.select_related('profile').order_by('-date_joined')
+    
+    # Apply filters
+    if search_query:
+        users = users.filter(
+            models.Q(username__icontains=search_query) |
+            models.Q(email__icontains=search_query) |
+            models.Q(first_name__icontains=search_query) |
+            models.Q(last_name__icontains=search_query)
+        )
+    
+    if user_type:
+        users = users.filter(profile__user_type=user_type)
+    
+    return render(request, 'accounts/admin_users.html', {
+        'users': users,
+        'search_query': search_query,
+        'user_type': user_type,
+    })
+
+
+@staff_member_required
+@require_POST
+def admin_toggle_user_status(request, user_id):
+    """Activate or deactivate a user"""
+    user = get_object_or_404(User, id=user_id)
+    
+    # Don't allow deactivating superusers
+    if user.is_superuser:
+        return JsonResponse({'error': 'Cannot deactivate superusers'}, status=403)
+    
+    user.is_active = not user.is_active
+    user.save()
+    
+    action = 'activated' if user.is_active else 'deactivated'
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'User {user.username} has been {action}',
+        'is_active': user.is_active
+    })
+
+
+@staff_member_required
+@require_POST
+def admin_change_user_role(request, user_id):
+    """Change a user's role between job_seeker and recruiter"""
+    import json
+    user = get_object_or_404(User, id=user_id)
+    data = json.loads(request.body)
+    new_role = data.get('role')
+    
+    if new_role not in ['job_seeker', 'recruiter']:
+        return JsonResponse({'error': 'Invalid role'}, status=400)
+    
+    # Don't allow changing superuser roles
+    if user.is_superuser:
+        return JsonResponse({'error': 'Cannot change superuser roles'}, status=403)
+    
+    profile, _ = Profile.objects.get_or_create(user=user)
+    profile.user_type = new_role
+    
+    # Set default location for recruiters
+    if new_role == 'recruiter' and not profile.location:
+        profile.location = 'N/A - Recruiter'
+    
+    profile.save()
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'User {user.username} role changed to {new_role}',
+        'new_role': new_role
+    })
+
+
+@staff_member_required
+@require_POST
+def admin_delete_user(request, user_id):
+    """Permanently delete a user"""
+    user = get_object_or_404(User, id=user_id)
+    
+    # Don't allow deleting superusers
+    if user.is_superuser:
+        return JsonResponse({'error': 'Cannot delete superusers'}, status=403)
+    
+    username = user.username
+    user.delete()
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'User {username} has been permanently deleted'
+    })
+
+
+@staff_member_required
+def admin_jobs(request):
+    """Job moderation - view, edit, remove jobs"""
+    from jobs.models import Job
+    
+    search_query = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    
+    jobs = Job.objects.select_related('posted_by').order_by('-created_at')
+    
+    # Apply filters
+    if search_query:
+        jobs = jobs.filter(
+            models.Q(title__icontains=search_query) |
+            models.Q(company__icontains=search_query) |
+            models.Q(location__icontains=search_query) |
+            models.Q(description__icontains=search_query)
+        )
+    
+    if status == 'active':
+        jobs = jobs.filter(is_active=True)
+    elif status == 'inactive':
+        jobs = jobs.filter(is_active=False)
+    
+    return render(request, 'accounts/admin_jobs.html', {
+        'jobs': jobs,
+        'search_query': search_query,
+        'status': status,
+    })
+
+
+@staff_member_required
+@require_POST
+def admin_toggle_job_status(request, job_id):
+    """Activate or deactivate a job posting"""
+    from jobs.models import Job
+    job = get_object_or_404(Job, id=job_id)
+    
+    job.is_active = not job.is_active
+    job.save()
+    
+    action = 'activated' if job.is_active else 'deactivated'
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'Job "{job.title}" has been {action}',
+        'is_active': job.is_active
+    })
+
+
+@staff_member_required
+@require_POST
+def admin_delete_job(request, job_id):
+    """Permanently delete a job posting"""
+    from jobs.models import Job
+    job = get_object_or_404(Job, id=job_id)
+    
+    title = job.title
+    job.delete()
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'Job "{title}" has been permanently deleted'
+    })
+
+
+@staff_member_required
+def admin_export_data(request):
+    """Export platform data to CSV"""
+    export_type = request.GET.get('type', 'users')
+    
+    if export_type == 'users':
+        return export_users_csv()
+    elif export_type == 'jobs':
+        return export_jobs_csv()
+    elif export_type == 'applications':
+        return export_applications_csv()
+    else:
+        return HttpResponse('Invalid export type', status=400)
+
+
+def export_users_csv():
+    """Export all users to CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="users_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Username', 'Email', 'First Name', 'Last Name', 
+        'User Type', 'Is Active', 'Is Staff', 'Date Joined', 
+        'Location', 'Skills', 'Profile Public'
+    ])
+    
+    users = User.objects.select_related('profile').all()
+    for user in users:
+        try:
+            profile = user.profile
+            writer.writerow([
+                user.id,
+                user.username,
+                user.email,
+                user.first_name,
+                user.last_name,
+                profile.user_type,
+                user.is_active,
+                user.is_staff,
+                user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                profile.location or '',
+                profile.skills or '',
+                profile.is_public,
+            ])
+        except Profile.DoesNotExist:
+            writer.writerow([
+                user.id,
+                user.username,
+                user.email,
+                user.first_name,
+                user.last_name,
+                'N/A',
+                user.is_active,
+                user.is_staff,
+                user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                '',
+                '',
+                'N/A',
+            ])
+    
+    return response
+
+
+def export_jobs_csv():
+    """Export all jobs to CSV"""
+    from jobs.models import Job
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="jobs_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Title', 'Company', 'Location', 'Job Type',
+        'Experience Level', 'Salary Min', 'Salary Max', 
+        'Is Active', 'Posted By', 'Created At', 'Applications Count'
+    ])
+    
+    jobs = Job.objects.select_related('posted_by').all()
+    for job in jobs:
+        applications_count = job.applications.count()
+        company_display = job.company or job.company_name or 'N/A'
+        writer.writerow([
+            job.id,
+            job.title,
+            company_display,
+            job.location,
+            job.get_job_type_display(),
+            job.get_experience_level_display(),
+            job.salary_min or '',
+            job.salary_max or '',
+            job.is_active,
+            job.posted_by.username if job.posted_by else 'N/A',
+            job.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            applications_count,
+        ])
+    
+    return response
+
+
+def export_applications_csv():
+    """Export all job applications to CSV"""
+    from jobs.models import JobApplication
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="applications_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Job Title', 'Company', 'Applicant Username', 
+        'Applicant Email', 'Status', 'Applied At', 
+        'Note/Message'
+    ])
+    
+    applications = JobApplication.objects.select_related('job', 'user').all()
+    for app in applications:
+        company_display = app.job.company or app.job.company_name or 'N/A'
+        note_preview = app.note[:100] + '...' if app.note and len(app.note) > 100 else app.note or ''
+        writer.writerow([
+            app.id,
+            app.job.title,
+            company_display,
+            app.user.username,
+            app.user.email,
+            app.get_status_display(),
+            app.applied_at.strftime('%Y-%m-%d %H:%M:%S'),
+            note_preview,
+        ])
+    
+    return response

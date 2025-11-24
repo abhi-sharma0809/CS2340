@@ -27,4 +27,5 @@ urlpatterns = [
     path("api/save-search/", views.save_search, name="save_search"),
     path("saved-search/<int:search_id>/", views.run_saved_search, name="run_saved_search"),
     path("search-notifications/", views.search_notifications, name="search_notifications"),
+    path("api/trigger-saved-search-check/", views.trigger_saved_search_check, name="trigger_saved_search_check"),
 ]

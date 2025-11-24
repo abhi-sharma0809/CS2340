@@ -1,6 +1,8 @@
 # accounts/models.py
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 
 class Profile(models.Model):
     USER_TYPE_CHOICES = [
@@ -17,6 +19,11 @@ class Profile(models.Model):
     education = models.TextField(blank=True)
     experience = models.TextField(blank=True)
     links = models.TextField(blank=True)
+    
+    # Location fields
+    location = models.CharField(max_length=200, blank=True, default='', help_text="City, State or City, Country")
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     # Privacy
     is_public = models.BooleanField(default=True)  # global gate
@@ -107,3 +114,11 @@ class EmailLog(models.Model):
     
     def __str__(self):
         return f"Email from {self.sender.username} to {self.recipient_email}: {self.subject}"
+
+
+# Signal to set default location for recruiters
+@receiver(pre_save, sender=Profile)
+def set_recruiter_default_location(sender, instance, **kwargs):
+    """Set a default placeholder location for recruiters if they don't have one"""
+    if instance.user_type == 'recruiter' and not instance.location:
+        instance.location = 'N/A - Recruiter'
