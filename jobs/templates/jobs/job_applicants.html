@@ -404,8 +404,17 @@
   <div class="page-header">
     <h1>Job Applicants</h1>
     <p>Review and communicate with candidates who applied to your job</p>
-    <div class="mt-3">
-      <a href="{% url 'jobs:pipeline_management' job.pk %}" class="btn btn-primary">
+    <div class="mt-3" style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <button id="showApplicantsTab" class="btn btn-primary" onclick="showTab('applicants')">
+        <i class="fas fa-users"></i> Applicants ({{ applications|length }})
+      </button>
+      <button id="showRecommendationsTab" class="btn btn-outline" onclick="showTab('recommendations')">
+        <i class="fas fa-star"></i> Recommended Candidates
+      </button>
+      <a href="{% url 'jobs:applicants_map' job.pk %}" class="btn btn-outline">
+        <i class="fas fa-map-marked-alt"></i> Applicants Map
+      </a>
+      <a href="{% url 'jobs:pipeline_management' job.pk %}" class="btn btn-gold">
         <i class="fas fa-columns"></i> Pipeline Management
       </a>
     </div>
@@ -454,6 +463,8 @@
     </div>
   </div>
 
+  <!-- Applicants Tab Content -->
+  <div id="applicantsTabContent">
   {% if applications %}
     {% for application in applications %}
       <div class="applicant-card">
@@ -535,6 +546,33 @@
       <p>This job hasn't received any applications yet. Share the job posting to attract candidates!</p>
     </div>
   {% endif %}
+  </div>
+  <!-- End Applicants Tab Content -->
+
+  <!-- Recommendations Tab Content -->
+  <div id="recommendationsTabContent" style="display: none;">
+    <div class="text-center" style="padding: 40px 20px;">
+      <div id="recommendationsLoading">
+        <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: var(--gt-gold);"></i>
+        <p style="margin-top: 16px; color: var(--muted);">Loading recommended candidates...</p>
+      </div>
+      <div id="recommendationsContent" style="display: none;"></div>
+      <div id="recommendationsError" style="display: none;" class="empty-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>Error loading recommendations</h3>
+        <p id="errorMessage"></p>
+        <button onclick="loadRecommendations()" class="btn btn-primary mt-3">
+          <i class="fas fa-redo"></i> Try Again
+        </button>
+      </div>
+      <div id="recommendationsEmpty" style="display: none;" class="empty-state">
+        <i class="fas fa-search"></i>
+        <h3>No recommendations found</h3>
+        <p>We couldn't find any candidates matching this job's requirements at this time.</p>
+      </div>
+    </div>
+  </div>
+  <!-- End Recommendations Tab Content -->
 </div>
 
 <!-- Communication Modals -->
@@ -601,6 +639,175 @@
 
 {% block extra_scripts %}
 <script>
+// Tab switching functionality
+let recommendationsLoaded = false;
+
+function showTab(tabName) {
+  console.log('showTab called with:', tabName);
+
+  const applicantsTab = document.getElementById('applicantsTabContent');
+  const recommendationsTab = document.getElementById('recommendationsTabContent');
+  const applicantsBtn = document.getElementById('showApplicantsTab');
+  const recommendationsBtn = document.getElementById('showRecommendationsTab');
+
+  console.log('Elements found:', {
+    applicantsTab: !!applicantsTab,
+    recommendationsTab: !!recommendationsTab,
+    applicantsBtn: !!applicantsBtn,
+    recommendationsBtn: !!recommendationsBtn
+  });
+
+  if (tabName === 'applicants') {
+    applicantsTab.style.display = 'block';
+    recommendationsTab.style.display = 'none';
+    applicantsBtn.className = 'btn btn-primary';
+    recommendationsBtn.className = 'btn btn-outline';
+  } else if (tabName === 'recommendations') {
+    console.log('Switching to recommendations tab');
+    applicantsTab.style.display = 'none';
+    recommendationsTab.style.display = 'block';
+    applicantsBtn.className = 'btn btn-outline';
+    recommendationsBtn.className = 'btn btn-primary';
+
+    // Load recommendations if not already loaded
+    if (!recommendationsLoaded) {
+      console.log('Loading recommendations for the first time');
+      loadRecommendations();
+    } else {
+      console.log('Recommendations already loaded');
+    }
+  }
+}
+
+// Load recommendations from API
+async function loadRecommendations() {
+  console.log('loadRecommendations called');
+
+  const loadingDiv = document.getElementById('recommendationsLoading');
+  const contentDiv = document.getElementById('recommendationsContent');
+  const errorDiv = document.getElementById('recommendationsError');
+  const emptyDiv = document.getElementById('recommendationsEmpty');
+
+  console.log('Recommendation elements found:', {
+    loadingDiv: !!loadingDiv,
+    contentDiv: !!contentDiv,
+    errorDiv: !!errorDiv,
+    emptyDiv: !!emptyDiv
+  });
+
+  // Reset states
+  loadingDiv.style.display = 'block';
+  contentDiv.style.display = 'none';
+  errorDiv.style.display = 'none';
+  emptyDiv.style.display = 'none';
+
+  try {
+    const url = '/jobs/api/job-recommendations/{{ job.id }}/';
+    console.log('Fetching recommendations from:', url);
+
+    const response = await fetch(url);
+    console.log('Response status:', response.status);
+
+    const data = await response.json();
+    console.log('API Response:', data);
+
+    if (data.success && data.recommendations.length > 0) {
+      // Render recommendations
+      let html = '';
+      data.recommendations.forEach(candidate => {
+        html += renderCandidateCard(candidate);
+      });
+
+      contentDiv.innerHTML = `
+        <div style="text-align: left; margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid var(--gt-gold);">
+          <strong style="color: var(--gt-navy);">Found ${data.total_recommendations} recommended candidate(s)</strong>
+          <p style="color: var(--muted); margin: 8px 0 0 0; font-size: 14px;">
+            These candidates match the skills, experience, and qualifications for "${data.job_title}"
+          </p>
+        </div>
+        ${html}
+      `;
+
+      console.log('Displaying', data.recommendations.length, 'recommendations');
+      loadingDiv.style.display = 'none';
+      contentDiv.style.display = 'block';
+      recommendationsLoaded = true;
+    } else {
+      // No recommendations found
+      console.log('No recommendations found');
+      loadingDiv.style.display = 'none';
+      emptyDiv.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Error loading recommendations:', error);
+    loadingDiv.style.display = 'none';
+    errorDiv.style.display = 'block';
+    if (document.getElementById('errorMessage')) {
+      document.getElementById('errorMessage').textContent = 'Failed to load recommendations. Please try again. Error: ' + error.message;
+    }
+  }
+}
+
+// Render a candidate recommendation card
+function renderCandidateCard(candidate) {
+  const matchReasonsHTML = candidate.match_reasons.map(reason =>
+    `<li style="margin-bottom: 4px; color: var(--text);">${reason}</li>`
+  ).join('');
+
+  return `
+    <div class="applicant-card">
+      <div class="applicant-header">
+        <div class="applicant-info">
+          <h3>${candidate.name}</h3>
+          <div class="applicant-email">${candidate.headline}</div>
+        </div>
+        <div class="applicant-actions">
+          <button class="btn-sm btn-gold" onclick="sendMessageToCandidateById(${candidate.id}, '${candidate.username}')">
+            <i class="fas fa-comment"></i> Message
+          </button>
+          <a href="${candidate.profile_url}" class="btn-sm btn-outline" target="_blank">
+            <i class="fas fa-user"></i> View Profile
+          </a>
+        </div>
+      </div>
+
+      <div class="applicant-details">
+        <div class="applicant-detail">
+          <i class="fas fa-map-marker-alt"></i>
+          <span>${candidate.location}</span>
+        </div>
+        <div class="applicant-detail">
+          <i class="fas fa-star" style="color: var(--gt-gold);"></i>
+          <span><strong>Match Score: ${candidate.match_score}</strong></span>
+        </div>
+      </div>
+
+      <div class="application-note" style="background: #fef3c7; border-left-color: var(--gt-gold);">
+        <h4>Why this candidate matches:</h4>
+        <ul style="margin: 0; padding-left: 20px;">
+          ${matchReasonsHTML}
+        </ul>
+      </div>
+
+      <div style="margin-top: 12px;">
+        <div class="applicant-detail">
+          <i class="fas fa-tools"></i>
+          <span style="font-size: 13px;">${candidate.skills}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Send message to candidate by ID (for recommended candidates who haven't applied)
+function sendMessageToCandidateById(recipientId, recipientName) {
+  document.getElementById('messageRecipientId').value = recipientId;
+  document.getElementById('messageJobApplicationId').value = ''; // No application yet
+  document.getElementById('messageSubject').value = 'Opportunity: {{ job.title }}';
+  document.getElementById('messageBody').value = 'Dear ' + recipientName + ',\n\nI came across your profile and think you might be a great fit for our {{ job.title }} position.\n\n';
+  openModal('sendMessageModal');
+}
+
 // Modal functions
 function openModal(modalId) {
   document.getElementById(modalId).style.display = 'flex';
@@ -677,8 +884,8 @@ document.getElementById('sendEmailForm').addEventListener('submit', function(e) 
 function sendMessageToCandidate(recipientId, recipientName, jobApplicationId) {
   document.getElementById('messageRecipientId').value = recipientId;
   document.getElementById('messageJobApplicationId').value = jobApplicationId;
-  document.getElementById('messageSubject').value = `Message regarding {{ job.title }}`;
-  document.getElementById('messageBody').value = `Dear ${recipientName},\n\n`;
+  document.getElementById('messageSubject').value = 'Message regarding {{ job.title }}';
+  document.getElementById('messageBody').value = 'Dear ' + recipientName + ',\n\n';
   openModal('sendMessageModal');
 }
 
@@ -687,8 +894,8 @@ function sendEmailToCandidate(recipientId, recipientEmail, recipientName, jobApp
   document.getElementById('emailRecipientId').value = recipientId;
   document.getElementById('emailJobApplicationId').value = jobApplicationId;
   document.getElementById('emailRecipient').value = recipientEmail;
-  document.getElementById('emailSubject').value = `Regarding your application for {{ job.title }}`;
-  document.getElementById('emailBody').value = `Dear ${recipientName},\n\nThank you for your interest in the {{ job.title }} position.\n\n`;
+  document.getElementById('emailSubject').value = 'Regarding your application for {{ job.title }}';
+  document.getElementById('emailBody').value = 'Dear ' + recipientName + ',\n\nThank you for your interest in the {{ job.title }} position.\n\n';
   openModal('sendEmailModal');
 }
 

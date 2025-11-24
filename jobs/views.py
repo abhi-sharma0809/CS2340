@@ -270,7 +270,7 @@ def post_job(request):
     except Profile.DoesNotExist:
         messages.error(request, "Please complete your profile setup first.")
         return redirect('accounts:profile')
-    
+
     if request.method == 'POST':
         form = JobPostForm(request.POST)
         if form.is_valid():
@@ -279,10 +279,11 @@ def post_job(request):
             return redirect('jobs:detail', pk=job.pk)
     else:
         form = JobPostForm()
-    
+
     return render(request, 'jobs/job_post.html', {
         'form': form,
-        'title': 'Post New Job'
+        'title': 'Post New Job',
+        'GOOGLE_MAPS_API_KEY': settings.GOOGLE_MAPS_API_KEY
     })
 
 @login_required
@@ -297,9 +298,9 @@ def edit_job(request, pk):
     except Profile.DoesNotExist:
         messages.error(request, "Please complete your profile setup first.")
         return redirect('accounts:profile')
-    
+
     job = get_object_or_404(Job, pk=pk)
-    
+
     if request.method == 'POST':
         form = JobPostForm(request.POST, instance=job)
         if form.is_valid():
@@ -308,11 +309,12 @@ def edit_job(request, pk):
             return redirect('jobs:detail', pk=job.pk)
     else:
         form = JobPostForm(instance=job)
-    
+
     return render(request, 'jobs/job_post.html', {
         'form': form,
         'title': f'Edit Job: {job.title}',
-        'job': job
+        'job': job,
+        'GOOGLE_MAPS_API_KEY': settings.GOOGLE_MAPS_API_KEY
     })
 
 @login_required
@@ -327,12 +329,56 @@ def my_jobs(request):
     except Profile.DoesNotExist:
         messages.error(request, "Please complete your profile setup first.")
         return redirect('accounts:profile')
-    
+
     # For now, we'll show all jobs since we don't have a specific recruiter model
     # In a real application, you'd filter by the logged-in user
     jobs = Job.objects.all().order_by('-created_at')
     return render(request, 'jobs/my_jobs.html', {
         'jobs': jobs
+    })
+
+
+@login_required
+def my_jobs_map(request):
+    """Map view showing all recruiter's job postings with location pins"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+
+    # Get all jobs with valid coordinates
+    jobs = Job.objects.filter(
+        latitude__isnull=False,
+        longitude__isnull=False
+    ).order_by('-created_at')
+
+    # Prepare job data for map markers
+    jobs_data = []
+    for job in jobs:
+        applicant_count = JobApplication.objects.filter(job=job).count()
+        jobs_data.append({
+            'id': job.id,
+            'title': job.title,
+            'company': job.company_name or 'Company',
+            'location': job.location,
+            'latitude': float(job.latitude),
+            'longitude': float(job.longitude),
+            'is_active': job.is_active,
+            'applicant_count': applicant_count,
+            'job_type': job.get_job_type_display() if job.job_type else 'N/A',
+            'url': f'/jobs/{job.id}/'
+        })
+
+    import json
+    return render(request, 'jobs/my_jobs_map.html', {
+        'jobs_data_json': json.dumps(jobs_data),
+        'total_jobs': len(jobs_data),
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY
     })
 
 @login_required
@@ -347,13 +393,242 @@ def job_applicants(request, pk):
     except Profile.DoesNotExist:
         messages.error(request, "Please complete your profile setup first.")
         return redirect('accounts:profile')
-    
+
     job = get_object_or_404(Job, pk=pk)
     applications = JobApplication.objects.filter(job=job).select_related('user', 'user__profile').order_by('-applied_at')
-    
+
     return render(request, 'jobs/job_applicants.html', {
         'job': job,
         'applications': applications
+    })
+
+
+@login_required
+def job_applicants_map(request, job_id):
+    """Map view showing applicant locations with clustering"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            messages.error(request, "Access denied. This area is for recruiters only.")
+            return redirect('core:home')
+    except Profile.DoesNotExist:
+        messages.error(request, "Please complete your profile setup first.")
+        return redirect('accounts:profile')
+
+    job = get_object_or_404(Job, pk=job_id)
+    applications = JobApplication.objects.filter(job=job).select_related('user', 'user__profile')
+
+    # Prepare applicant data for map
+    applicants_data = []
+    for application in applications:
+        try:
+            candidate_profile = application.user.profile
+            # Only include applicants with valid location coordinates
+            if candidate_profile.latitude and candidate_profile.longitude:
+                # Calculate distance from job location if available
+                distance = None
+                if job.latitude and job.longitude:
+                    distance = _calculate_distance(
+                        job.latitude, job.longitude,
+                        candidate_profile.latitude, candidate_profile.longitude
+                    )
+
+                applicants_data.append({
+                    'id': application.user.id,
+                    'name': application.user.get_full_name() or application.user.username,
+                    'email': application.user.email,
+                    'username': application.user.username,
+                    'headline': candidate_profile.headline or 'No headline',
+                    'location': candidate_profile.location or 'Unknown',
+                    'latitude': float(candidate_profile.latitude),
+                    'longitude': float(candidate_profile.longitude),
+                    'distance_km': int(distance) if distance else None,
+                    'status': application.get_status_display(),
+                    'status_class': application.status,
+                    'applied_at': application.applied_at.strftime('%Y-%m-%d'),
+                    'skills': candidate_profile.skills[:100] if candidate_profile.skills else 'Not specified',
+                    'profile_url': f'/accounts/u/{application.user.username}/'
+                })
+        except Profile.DoesNotExist:
+            continue
+
+    # Calculate statistics
+    total_applicants = len(applicants_data)
+    avg_distance = None
+    within_radius = 0
+    location_stats = {}
+
+    if applicants_data and job.latitude and job.longitude:
+        distances = [a['distance_km'] for a in applicants_data if a['distance_km']]
+        if distances:
+            avg_distance = int(sum(distances) / len(distances))
+            # Assume 50km as reasonable commute radius
+            within_radius = sum(1 for d in distances if d <= 50)
+
+        # Count applicants by city
+        for applicant in applicants_data:
+            city = applicant['location'].split(',')[0].strip()
+            location_stats[city] = location_stats.get(city, 0) + 1
+
+    # Get top 5 cities
+    top_cities = sorted(location_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    import json
+    return render(request, 'jobs/job_applicants_map.html', {
+        'job': job,
+        'applicants_data_json': json.dumps(applicants_data),
+        'total_applicants': total_applicants,
+        'total_applications': applications.count(),
+        'avg_distance': avg_distance,
+        'within_radius': within_radius,
+        'top_cities': top_cities,
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY
+    })
+
+
+@login_required
+def job_candidate_recommendations(request, job_id):
+    """Get recommended candidates for a specific job posting"""
+    # Check if user is a recruiter
+    try:
+        profile = Profile.objects.get(user=request.user)
+        if not profile.is_recruiter:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'Profile not found'}, status=404)
+
+    job = get_object_or_404(Job, pk=job_id)
+
+    # Extract job requirements
+    job_skills = _skill_tokens(job.required_skills or job.description)
+    job_location = job.location
+    job_lat = job.latitude
+    job_lon = job.longitude
+
+    # Get all job seekers who haven't applied yet
+    existing_applicants = JobApplication.objects.filter(job=job).values_list('user_id', flat=True)
+    job_seekers = User.objects.filter(
+        profile__user_type='job_seeker',
+        profile__is_public=True
+    ).exclude(id__in=existing_applicants).select_related('profile')
+
+    candidates = []
+
+    for user in job_seekers:
+        try:
+            candidate_profile = user.profile
+        except Profile.DoesNotExist:
+            continue
+
+        match_score = 0
+        match_reasons = []
+
+        # Skills matching (highest priority)
+        if job_skills and candidate_profile.skills:
+            user_skills = _skill_tokens(candidate_profile.skills)
+            skill_matches = set(job_skills) & set(user_skills)
+            if skill_matches:
+                match_score += len(skill_matches) * 10
+                match_reasons.append(f"{len(skill_matches)} matching skill(s): {', '.join(list(skill_matches)[:3])}")
+
+        # Education matching
+        if candidate_profile.education and job.description:
+            education_lower = candidate_profile.education.lower()
+            job_desc_lower = job.description.lower()
+            # Look for degree keywords in job description
+            degree_keywords = ['bachelor', 'master', 'phd', 'doctorate', 'associate', 'degree', 'university', 'college']
+            education_mentions = sum(1 for keyword in degree_keywords if keyword in job_desc_lower and keyword in education_lower)
+            if education_mentions > 0:
+                match_score += education_mentions * 5
+                match_reasons.append(f"Relevant education background")
+
+        # Experience matching
+        if candidate_profile.experience and job.description:
+            experience_lower = candidate_profile.experience.lower()
+            job_desc_lower = job.description.lower()
+            # Extract experience keywords from job description
+            experience_keywords = re.findall(r'\b[a-z]+\b', job_desc_lower)
+            experience_matches = sum(1 for keyword in experience_keywords if len(keyword) > 4 and keyword in experience_lower)
+            if experience_matches > 5:  # Threshold to avoid noise
+                match_score += min(experience_matches, 10) * 3  # Cap contribution
+                match_reasons.append(f"Relevant work experience")
+
+        # Location proximity (bonus points)
+        if job_lat and job_lon and candidate_profile.latitude and candidate_profile.longitude:
+            distance_km = _calculate_distance(job_lat, job_lon, candidate_profile.latitude, candidate_profile.longitude)
+            if distance_km is not None:
+                # Closer candidates get bonus points (max 20 points for <5km, decreasing)
+                if distance_km < 5:
+                    proximity_score = 20
+                elif distance_km < 25:
+                    proximity_score = 15
+                elif distance_km < 50:
+                    proximity_score = 10
+                elif distance_km < 100:
+                    proximity_score = 5
+                else:
+                    proximity_score = 2
+
+                match_score += proximity_score
+                match_reasons.append(f"Located {int(distance_km)} km from job location")
+        elif job_location and candidate_profile.location:
+            # Fallback to text-based location matching
+            if job_location.lower() in candidate_profile.location.lower():
+                match_score += 5
+                match_reasons.append(f"Located in {candidate_profile.location}")
+
+        # Experience level alignment
+        if job.experience_level and candidate_profile.experience:
+            experience_text = candidate_profile.experience.lower()
+            level_keywords = {
+                'entry': ['entry', 'junior', 'graduate', 'intern'],
+                'mid': ['mid', 'intermediate', '2 years', '3 years', '4 years'],
+                'senior': ['senior', 'lead', '5 years', '6 years', '7+ years'],
+                'lead': ['lead', 'principal', 'manager', 'architect'],
+                'executive': ['director', 'vp', 'cto', 'ceo', 'executive']
+            }
+
+            expected_keywords = level_keywords.get(job.experience_level, [])
+            if any(keyword in experience_text for keyword in expected_keywords):
+                match_score += 5
+                match_reasons.append(f"Experience level matches {job.get_experience_level_display()}")
+
+        # Only include candidates with meaningful matches
+        if match_score > 0:
+            candidates.append({
+                'user': user,
+                'profile': candidate_profile,
+                'match_score': match_score,
+                'match_reasons': match_reasons
+            })
+
+    # Sort by match score (highest first)
+    candidates.sort(key=lambda x: x['match_score'], reverse=True)
+
+    # Return top 25 candidates
+    top_candidates = candidates[:25]
+
+    # Format for JSON response
+    recommendations = []
+    for candidate in top_candidates:
+        recommendations.append({
+            'id': candidate['user'].id,
+            'username': candidate['user'].username,
+            'name': candidate['user'].get_full_name() or candidate['user'].username,
+            'headline': candidate['profile'].headline or 'No headline',
+            'location': candidate['profile'].location or 'Not specified',
+            'skills': candidate['profile'].skills[:100] if candidate['profile'].skills else 'Not specified',
+            'match_score': candidate['match_score'],
+            'match_reasons': candidate['match_reasons'],
+            'profile_url': f"/accounts/u/{candidate['user'].username}/"
+        })
+
+    return JsonResponse({
+        'success': True,
+        'job_title': job.title,
+        'total_recommendations': len(recommendations),
+        'recommendations': recommendations
     })
 
 
@@ -667,114 +942,129 @@ def candidate_search(request):
     experience = request.GET.get('experience', '').strip()
     
     candidates = []
-    
+
     if any([skills, location, education, experience]):
         # Get job seekers
         job_seekers = User.objects.filter(
             profile__user_type='job_seeker',
             profile__is_public=True
         ).select_related('profile')
-        
+
         for user in job_seekers:
             try:
                 profile = user.profile
             except Profile.DoesNotExist:
                 continue
-            match_score = 0
+
             match_reasons = []
-            
-            # Skills matching
+            has_match = False  # Changed to OR logic: matches ANY criterion
+
+            # Skills matching (OR logic - if ANY skill matches)
             if skills:
                 try:
                     user_skills = _skill_tokens(profile.skills or '')
                     search_skills = _skill_tokens(skills)
-                    skill_matches = len(set(user_skills) & set(search_skills))
-                    if skill_matches > 0:
-                        match_score += skill_matches * 10
-                        match_reasons.append(f"Skills: {skill_matches} matches")
-                except Exception as e:
-                    # Skip this candidate if there's an error with skills processing
-                    continue
-            
-            # Education matching
-            if education and profile.education:
-                try:
-                    education_lower = profile.education.lower()
-                    education_keywords = education.lower().split()
-                    education_matches = sum(1 for keyword in education_keywords if keyword in education_lower)
-                    if education_matches > 0:
-                        match_score += education_matches * 5
-                        match_reasons.append(f"Education: {education_matches} matches")
+                    skill_matches = set(user_skills) & set(search_skills)
+                    if skill_matches:
+                        has_match = True
+                        matching_skills = ', '.join(list(skill_matches)[:5])
+                        if len(skill_matches) > 5:
+                            matching_skills += f" (+{len(skill_matches) - 5} more)"
+                        match_reasons.append(f"Matching skills: {matching_skills}")
                 except Exception:
                     pass
-            
-            # Experience matching
-            if experience and profile.experience:
+
+            # Education matching (OR logic - if ANY keyword matches)
+            if education:
                 try:
-                    experience_lower = profile.experience.lower()
-                    experience_keywords = experience.lower().split()
-                    experience_matches = sum(1 for keyword in experience_keywords if keyword in experience_lower)
-                    if experience_matches > 0:
-                        match_score += experience_matches * 5
-                        match_reasons.append(f"Experience: {experience_matches} matches")
+                    # Check both old text field and new structured entries
+                    education_match = False
+                    if profile.education:
+                        education_lower = profile.education.lower()
+                        education_keywords = education.lower().split()
+                        if any(keyword in education_lower for keyword in education_keywords):
+                            education_match = True
+
+                    # Also check structured education entries
+                    for edu in profile.education_entries.all():
+                        edu_text = f"{edu.school_name} {edu.degree} {edu.field_of_study}".lower()
+                        if any(keyword in edu_text for keyword in education.lower().split()):
+                            education_match = True
+                            break
+
+                    if education_match:
+                        has_match = True
+                        match_reasons.append(f"Education background matches search")
                 except Exception:
                     pass
-            
-            # Location matching with radius (HARD FILTER when location specified)
-            location_match = False
-            if location and profile.location:
+
+            # Experience matching (OR logic - if ANY keyword matches)
+            if experience:
+                try:
+                    # Check both old text field and new structured entries
+                    experience_match = False
+                    if profile.experience:
+                        experience_lower = profile.experience.lower()
+                        experience_keywords = experience.lower().split()
+                        if any(keyword in experience_lower for keyword in experience_keywords):
+                            experience_match = True
+
+                    # Also check structured work experience entries
+                    for work in profile.work_experiences.all():
+                        work_text = f"{work.job_title} {work.company_name} {work.description}".lower()
+                        if any(keyword in work_text for keyword in experience.lower().split()):
+                            experience_match = True
+                            break
+
+                    if experience_match:
+                        has_match = True
+                        match_reasons.append(f"Work experience matches search")
+                except Exception:
+                    pass
+
+            # Location matching (OR logic - if location matches)
+            if location:
+                location_match = False
                 try:
                     # Try distance-based matching if coordinates are available
                     search_lat, search_lon = _get_coordinates_from_location(location)
-                    
-                    # Use stored coordinates if available, otherwise try to get them
                     profile_lat = profile.latitude
                     profile_lon = profile.longitude
-                    
+
                     if not profile_lat or not profile_lon:
                         profile_lat, profile_lon = _get_coordinates_from_location(profile.location)
-                    
+
                     # If we have coordinates for both, calculate distance
                     if search_lat and search_lon and profile_lat and profile_lon:
                         distance_km = _calculate_distance(search_lat, search_lon, profile_lat, profile_lon)
                         radius_km = int(radius) if radius.isdigit() else 50
-                        
+
                         if distance_km <= radius_km:
-                            # Within radius - candidate qualifies
                             location_match = True
-                            # Score based on proximity (closer = higher score)
-                            proximity_score = max(1, 10 - int(distance_km / (radius_km / 10)))
-                            match_score += proximity_score
+                            has_match = True
                             match_reasons.append(f"Location: {profile.location} ({int(distance_km)} km away)")
-                        # If outside radius, location_match stays False
                     else:
                         # Fallback to text-based matching if no coordinates
-                        location_lower = location.lower()
-                        profile_location_lower = profile.location.lower()
-                        
-                        if (location_lower in profile_location_lower or 
-                            profile_location_lower in location_lower or
-                            any(word in profile_location_lower for word in location_lower.split(','))):
-                            location_match = True
-                            match_score += 5
-                            match_reasons.append(f"Location: {profile.location}")
+                        if profile.location:
+                            location_lower = location.lower()
+                            profile_location_lower = profile.location.lower()
+
+                            if (location_lower in profile_location_lower or
+                                profile_location_lower in location_lower or
+                                any(word in profile_location_lower for word in location_lower.split(','))):
+                                location_match = True
+                                has_match = True
+                                match_reasons.append(f"Location: {profile.location}")
                 except Exception:
                     pass
-            elif not location:
-                # If no location search specified, all candidates qualify
-                location_match = True
-            
-            # Only include candidate if they have matches AND pass location filter
-            if match_score > 0 and location_match:
+
+            # Include candidate if they match ANY search criterion (OR logic)
+            if has_match:
                 candidates.append({
                     'user': user,
                     'profile': profile,
-                    'match_score': match_score,
                     'match_reasons': match_reasons
                 })
-        
-        # Sort by match score
-        candidates.sort(key=lambda x: x['match_score'], reverse=True)
     
     return render(request, 'jobs/candidate_search.html', {
         'candidates': candidates,

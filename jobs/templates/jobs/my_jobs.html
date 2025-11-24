@@ -206,6 +206,14 @@
 <div class="page-header">
   <h1>My Posted Jobs</h1>
   <p>Manage your job postings and track applications</p>
+  <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'jobs:my_jobs_map' %}" class="btn btn-gold">
+      <i class="fas fa-map-marked-alt"></i> View Jobs on Map
+    </a>
+    <a href="{% url 'jobs:post' %}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Post New Job
+    </a>
+  </div>
 </div>
 
 <div class="jobs-container">
